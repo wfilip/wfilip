@@ -681,14 +681,18 @@ begin
         end if;
       else
         vSHP_DEF := 2;
-        vSHP_EDGE1 := Abs(vzm.max_stepD-vzm.stepD);
-        vSHP_EDGE2 := Abs(vzm.max_stepP-vzm.stepP);
-        vSHP_EDGE3 := Abs(vzm.max_stepG-vzm.stepG);
-        vSHP_EDGE4 := Abs(vzm.max_stepL-vzm.stepL);
+--        vSHP_EDGE1 := Abs(vzm.max_stepD-vzm.stepD);
+--        vSHP_EDGE2 := Abs(vzm.max_stepP-vzm.stepP);
+--        vSHP_EDGE3 := Abs(vzm.max_stepG-vzm.stepG);
+--        vSHP_EDGE4 := Abs(vzm.max_stepL-vzm.stepL);
 --        vSHP_EDGE1 := -vzm.stepD;
 --        vSHP_EDGE2 := -vzm.stepP;
 --        vSHP_EDGE3 := -vzm.stepG;
 --        vSHP_EDGE4 := -vzm.stepL;
+        vSHP_EDGE1 := Abs(-vzm.stepD);
+        vSHP_EDGE2 := Abs(-vzm.stepP);
+        vSHP_EDGE3 := Abs(-vzm.stepG);
+        vSHP_EDGE4 := Abs(-vzm.stepL);
       end if;
 
       vResult := '<SHP> '||
