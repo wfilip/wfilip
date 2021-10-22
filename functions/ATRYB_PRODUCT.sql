@@ -1,3 +1,4 @@
+--funckja zwraca czêœæ wspólna listy atryb. 00011
 create or replace FUNCTION ATRYB_PRODUCT (pIDENT1 VARCHAR2, pIDENT2 VARCHAR2) RETURN VARCHAR2
 AS
  vRet VARCHAR2(100):=' ';
