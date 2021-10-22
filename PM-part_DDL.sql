@@ -2,8 +2,7 @@
 --  File created - poniedzia≥ek-paüdziernika-11-2021   
 --------------------------------------------------------
 ---------------------------
---New VIEW
---V_ZLEC_MON
+--New VIEW  V_ZLEC_MON
 ---------------------------
 CREATE OR REPLACE FORCE VIEW "V_ZLEC_MON" 
  ( "NR_KOM_ZLEC", "NR_POZ", "NR_EL", "NR_EL_WEW", "GRUB", "GAZ", "SILIKON", "HARTOWANA", "IND_BUD", "STEPL", "STEPD", "STEPP", "STEPG", "MAX_STEPL", "MAX_STEPD", "MAX_STEPP", "MAX_STEPG", "USZCZ_ROZNE", "USZCZ_STD", "SZER", "WYS", "ILE_WARSTW", "POWL", "POWR", "NR_KAT", "TYP_KAT", "PAR_KSZT", "SZPROS"
