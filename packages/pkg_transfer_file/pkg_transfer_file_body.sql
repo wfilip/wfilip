@@ -531,7 +531,8 @@ CREATE OR REPLACE PACKAGE BODY "PKG_TRANSFER_FILE" AS
                        || vsep2
                        || vlinia;
         END IF;
-
+-- generowanie rekordów pro zgodnie z dokumentacją FOREL FILE TRANSFER 2.2
+-- PRO_TYPE 14 inset
         select pkg_forel240.generate_pro(pDeviceId,pNrKompZlec,pNrPoz,pNrWar) into vLinia from dual;
         if length(trim(vLinia))>0 then
             vResult := vResult||vSep2||vlinia;
