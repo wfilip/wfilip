@@ -1,0 +1,10 @@
+create or replace TRIGGER "OPT_TAF_ON_ZATW" 
+BEFORE UPDATE OF D_WYK,FLAG,NR_KOMP_INSTAL,ZM_WYK ON OPT_TAF 
+FOR EACH ROW 
+BEGIN
+  PKG_REJESTRACJA.REJ_WG_TAFLI(:NEW.nr_opt, :NEW.nr_tafli, 1, :NEW.d_wyk, :NEW.zm_wyk, case when :NEW.ZM_WYK>0 then :NEW.nr_komp_instal else 0 end);
+EXCEPTION WHEN OTHERS THEN
+ ZAPISZ_LOG('OPT_TAF_ON_ZATW',:NEW.nr_opt,'U',0);
+ ZAPISZ_ERR(SQLERRM);
+END;
+/
