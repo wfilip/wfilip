@@ -1,686 +1,904 @@
-  CREATE OR REPLACE PACKAGE BODY "PKG_LIPROD280" AS
+CREATE OR REPLACE PACKAGE BODY "PKG_LIPROD280" AS
 
-function BCD (pNrKompSzyby number) RETURN VARCHAR2 
-as
-  vResult varchar2(1000);
-  vBARCODE number(24);
-  vSep char;
-begin
-  vResult := ' ';
-  vSep := ' ';
+    FUNCTION bcd (
+        pnrkompszyby NUMBER
+    ) RETURN VARCHAR2 AS
+        vresult    VARCHAR2(1000);
+        vbarcode   NUMBER(24);
+        vsep       CHAR;
+    BEGIN
+        vresult := ' ';
+        vsep := ' ';
+        vbarcode := pnrkompszyby;
+        vresult := '<BCD> ' || rpad(vbarcode, 24);
+        RETURN vresult;
+    END bcd;
 
-  vBARCODE := pNrKompSzyby;
+    FUNCTION bea (
+        pnrkompzlec   NUMBER,
+        pnrpoz        NUMBER,
+        pnrelem       NUMBER
+    ) RETURN VARCHAR2 AS
 
-  vResult := '<BCD> '||
-    Rpad(vBARCODE,24);
+        CURSOR c1 IS
+        SELECT
+            *
+        FROM
+            v_zlec_mon vzm
+        WHERE
+            vzm.nr_kom_zlec = pnrkompzlec
+            AND vzm.nr_poz = pnrpoz
+            AND vzm.nr_el_wew = pnrelem;
 
-return vResult;
-end BCD;
-
-FUNCTION BEA (pNrKompZlec number, pNrPoz number, pNrElem number) RETURN VARCHAR2 
-as
-  cursor c1 is  
-    select * from v_zlec_mon vzm WHERE vzm.nr_kom_zlec=pNrKompZlec and vzm.nr_poz=pNrPoz and vzm.nr_el_wew=pNrElem;
-  vzm v_zlec_mon%rowtype;
-
-  vResult varchar2(1000);
-
-  cf number;
-  c number;
-  i number;
-  vStep number;
-
-  vINDEX number(3):=0;
-  vSHEET_INX number(1):=0;
-  vFACESIDE number(1):=0;
-  vDESCRIPT varchar2(40):=' ';
-  vTYPE number(2):=0;
-  vEDGE1 number(1):=0;
-  vEDGE2 number(1):=0;
-  vEDGE3 number(1):=0;
-  vEDGE4 number(1):=0;
-  vEDGE5 number(1):=0;
-  vEDGE6 number(1):=0;
-  vEDGE7 number(1):=0;
-  vEDGE8 number(1):=0;
-  vCORNER1 number(1):=0;
-  vCORNER2 number(1):=0;
-  vCORNER3 number(1):=0;
-  vCORNER4 number(1):=0;
-  vCORNER5 number(1):=0;
-  vCORNER6 number(1):=0;
-  vCORNER7 number(1):=0;
-  vCORNER8 number(1):=0;
-  vCORNER9 number(1):=0;
-  vCORNER10 number(1):=0;
-  vCORNER11 number(1):=0;
-  vCORNER12 number(1):=0;
-  vCORNER13 number(1):=0;
-  vCORNER14 number(1):=0;
-  vCORNER15 number(1):=0;
-  vCORNER16 number(1):=0;
-  vXCOORD number(5):=0;
-  vYCOORD number(5):=0;
-  vRADIUS number(5):=0;
-  vWIDTH number(5):=0;
-  vHEIGHT number(5):=0;
-
-  vSep char;
-  vSep2 char;
-begin
-  vResult := '';
-  vSep := ' ';
-  vSep2 := Chr(9);
-  cf := 0;
-  c := 0;
-  i := 0;
+        vzm          v_zlec_mon%rowtype;
+        vresult      VARCHAR2(1000);
+        cf           NUMBER;
+        c            NUMBER;
+        i            NUMBER;
+        vstep        NUMBER;
+        vindex       NUMBER(3) := 0;
+        vsheet_inx   NUMBER(1) := 0;
+        vfaceside    NUMBER(1) := 0;
+        vdescript    VARCHAR2(40) := ' ';
+        vtype        NUMBER(2) := 0;
+        vedge1       NUMBER(1) := 0;
+        vedge2       NUMBER(1) := 0;
+        vedge3       NUMBER(1) := 0;
+        vedge4       NUMBER(1) := 0;
+        vedge5       NUMBER(1) := 0;
+        vedge6       NUMBER(1) := 0;
+        vedge7       NUMBER(1) := 0;
+        vedge8       NUMBER(1) := 0;
+        vcorner1     NUMBER(1) := 0;
+        vcorner2     NUMBER(1) := 0;
+        vcorner3     NUMBER(1) := 0;
+        vcorner4     NUMBER(1) := 0;
+        vcorner5     NUMBER(1) := 0;
+        vcorner6     NUMBER(1) := 0;
+        vcorner7     NUMBER(1) := 0;
+        vcorner8     NUMBER(1) := 0;
+        vcorner9     NUMBER(1) := 0;
+        vcorner10    NUMBER(1) := 0;
+        vcorner11    NUMBER(1) := 0;
+        vcorner12    NUMBER(1) := 0;
+        vcorner13    NUMBER(1) := 0;
+        vcorner14    NUMBER(1) := 0;
+        vcorner15    NUMBER(1) := 0;
+        vcorner16    NUMBER(1) := 0;
+        vxcoord      NUMBER(5) := 0;
+        vycoord      NUMBER(5) := 0;
+        vradius      NUMBER(5) := 0;
+        vwidth       NUMBER(5) := 0;
+        vheight      NUMBER(5) := 0;
+        vsep         CHAR;
+        vsep2        CHAR;
+    BEGIN
+        vresult := '';
+        vsep := ' ';
+        vsep2 := chr(9);
+        cf := 0;
+        c := 0;
+        i := 0;
 
 -- Pobierz dane z widoku v_zlec_mon
-  OPEN c1;
-  LOOP
-    FETCH c1 INTO vzm;
-    EXIT WHEN c1%NOTFOUND; 
+        OPEN c1;
+        LOOP
+            FETCH c1 INTO vzm;
+            EXIT WHEN c1%notfound; 
 
 -- gdy warstwa ramki
-    if pNrElem mod 2 = 0 then
-      cf := floor(pNrElem/2);
+            IF pnrelem MOD 2 = 0 THEN
+                cf := floor(pnrelem / 2);
+                FOR i IN 1..4 LOOP
+                    IF i = 1 THEN
+                        vstep := vzm.stepd;
+                    ELSIF i = 2 THEN
+                        vstep := vzm.stepp;
+                    ELSIF i = 3 THEN
+                        vstep := vzm.stepg;
+                    ELSIF i = 4 THEN
+                        vstep := vzm.stepl;
+                    END IF;
 
-      for i in 1..4 loop
-        if i=1 then vStep := vzm.stepD;
-        elsif i=2 then vStep := vzm.stepP;
-        elsif i=3 then vStep := vzm.stepG;
-        elsif i=4 then vStep := vzm.stepL;
-        end if;
-        if vStep>0 then
-          vINDEX:=0;
-          vSHEET_INX:=0;
-          vFACESIDE:=0;
-          vDESCRIPT:=' ';
-          vTYPE:=0;
-          vEDGE1:=0;
-          vEDGE2:=0;
-          vEDGE3:=0;
-          vEDGE4:=0;
-          vEDGE5:=0;
-          vEDGE6:=0;
-          vEDGE7:=0;
-          vEDGE8:=0;
-          vCORNER1:=0;
-          vCORNER2:=0;
-          vCORNER3:=0;
-          vCORNER4:=0;
-          vCORNER5:=0;
-          vCORNER6:=0;
-          vCORNER7:=0;
-          vCORNER8:=0;
-          vCORNER9:=0;
-          vCORNER10:=0;
-          vCORNER11:=0;
-          vCORNER12:=0;
-          vCORNER13:=0;
-          vCORNER14:=0;
-          vCORNER15:=0;
-          vCORNER16:=0;
-          vXCOORD:=0;
-          vYCOORD:=0;
-          vRADIUS:=0;
-          vWIDTH:=0;
-          vHEIGHT:=0;
+                    IF vstep > 0 THEN
+                        vindex := 0;
+                        vsheet_inx := 0;
+                        vfaceside := 0;
+                        vdescript := ' ';
+                        vtype := 0;
+                        vedge1 := 0;
+                        vedge2 := 0;
+                        vedge3 := 0;
+                        vedge4 := 0;
+                        vedge5 := 0;
+                        vedge6 := 0;
+                        vedge7 := 0;
+                        vedge8 := 0;
+                        vcorner1 := 0;
+                        vcorner2 := 0;
+                        vcorner3 := 0;
+                        vcorner4 := 0;
+                        vcorner5 := 0;
+                        vcorner6 := 0;
+                        vcorner7 := 0;
+                        vcorner8 := 0;
+                        vcorner9 := 0;
+                        vcorner10 := 0;
+                        vcorner11 := 0;
+                        vcorner12 := 0;
+                        vcorner13 := 0;
+                        vcorner14 := 0;
+                        vcorner15 := 0;
+                        vcorner16 := 0;
+                        vxcoord := 0;
+                        vycoord := 0;
+                        vradius := 0;
+                        vwidth := 0;
+                        vheight := 0;
+                        c := c + 1;
+                        vindex := c;
+                        vsheet_inx := cf;
+                        vtype := 6;
+                        IF i = 1 THEN
+                            vedge1 := 1;
+                            vdescript := 'Pomniejszenie ramki D';
+                        ELSIF i = 2 THEN
+                            vedge2 := 1;
+                            vdescript := 'Pomniejszenie ramki P';
+                        ELSIF i = 3 THEN
+                            vedge3 := 1;
+                            vdescript := 'Pomniejszenie ramki G';
+                        ELSIF i = 4 THEN
+                            vedge4 := 1;
+                            vdescript := 'Pomniejszenie ramki L';
+                        END IF;
 
+                        vwidth := vstep + vzm.uszcz_std;
+                        vresult := vresult
+                                   || '<BEA> '
+                                   || lpad(vindex, 3, '0')
+                                   || vsep
+                                   || vsheet_inx
+                                   || vsep
+                                   || vfaceside
+                                   || vsep
+                                   || rpad(vdescript, 40)
+                                   || vsep
+                                   || lpad(vtype, 2, '0')
+                                   || vsep
+                                   || vedge1
+                                   || vsep
+                                   || vedge2
+                                   || vsep
+                                   || vedge3
+                                   || vsep
+                                   || vedge4
+                                   || vsep
+                                   || vedge5
+                                   || vsep
+                                   || vedge6
+                                   || vsep
+                                   || vedge7
+                                   || vsep
+                                   || vedge8
+                                   || vsep
+                                   || vcorner1
+                                   || vsep
+                                   || vcorner2
+                                   || vsep
+                                   || vcorner3
+                                   || vsep
+                                   || vcorner4
+                                   || vsep
+                                   || vcorner5
+                                   || vsep
+                                   || vcorner6
+                                   || vsep
+                                   || vcorner7
+                                   || vsep
+                                   || vcorner8
+                                   || vsep
+                                   || vcorner9
+                                   || vsep
+                                   || vcorner10
+                                   || vsep
+                                   || vcorner11
+                                   || vsep
+                                   || vcorner12
+                                   || vsep
+                                   || vcorner13
+                                   || vsep
+                                   || vcorner14
+                                   || vsep
+                                   || vcorner15
+                                   || vsep
+                                   || vcorner16
+                                   || vsep
+                                   || lpad(vxcoord, 5, '0')
+                                   || vsep
+                                   || lpad(vycoord, 5, '0')
+                                   || vsep
+                                   || lpad(vradius * 10, 5, '0')
+                                   || vsep
+                                   || lpad(vwidth * 10, 5, '0')
+                                   || vsep
+                                   || lpad(vheight * 10, 5, '0')
+                                   || vsep2;
 
-          c := c+1;
-          vINDEX := c;
-          vSHEET_INX := cf;
-          vTYPE := 6;
-          if i=1 then 
-            vEDGE1 := 1;
-            vDESCRIPT := 'Pomniejszenie ramki D';
-          elsif i=2 then 
-            vEDGE2 := 1;
-            vDESCRIPT := 'Pomniejszenie ramki P';
-          elsif i=3 then 
-            vEDGE3 := 1;
-            vDESCRIPT := 'Pomniejszenie ramki G';
-          elsif i=4 then 
-            vEDGE4 := 1;
-            vDESCRIPT := 'Pomniejszenie ramki L';
-          end if; 
-          vWIDTH := vStep+vzm.uszcz_std;
+                    END IF;
 
-          vResult := vResult||'<BEA> '||
-            LPad(vINDEX,3,'0')||vSep||
-            vSHEET_INX||vSep||
-            vFACESIDE||vSep||
-            RPad(vDESCRIPT,40)||vSep||
-            LPad(vTYPE,2,'0')||vSep||
-            vEDGE1||vSep||
-            vEDGE2||vSep||
-            vEDGE3||vSep||
-            vEDGE4||vSep||
-            vEDGE5||vSep||
-            vEDGE6||vSep||
-            vEDGE7||vSep||
-            vEDGE8||vSep||
-            vCORNER1||vSep||
-            vCORNER2||vSep||
-            vCORNER3||vSep||
-            vCORNER4||vSep||
-            vCORNER5||vSep||
-            vCORNER6||vSep||
-            vCORNER7||vSep||
-            vCORNER8||vSep||
-            vCORNER9||vSep||
-            vCORNER10||vSep||
-            vCORNER11||vSep||
-            vCORNER12||vSep||
-            vCORNER13||vSep||
-            vCORNER14||vSep||
-            vCORNER15||vSep||
-            vCORNER16||vSep||
-            LPad(vXCOORD,5,'0')||vSep||
-            LPad(vYCOORD,5,'0')||vSep||
-            LPad(vRADIUS*10,5,'0')||vSep||
-            LPad(vWIDTH*10,5,'0')||vSep||
-            LPad(vHEIGHT*10,5,'0')||vSep2;
-        end if;
-      end loop;
-    end if;
-  end loop;
-  close c1;
+                END LOOP;
 
-return vResult;
-end bea;
+            END IF;
 
-FUNCTION BTH RETURN VARCHAR2 
-as
-  vResult varchar2(1000);
+        END LOOP;
 
-  vBTH_INFO varchar2(10);
-  vBCD_START number(6);
-  vBATCH_NO number(8);
+        CLOSE c1;
+        RETURN vresult;
+    END bea;
 
-  vSep char;
-begin
-  vResult := ' ';
-  vSep := ' ';
+    FUNCTION bth RETURN VARCHAR2 AS
 
-  vBTH_INFO := ' ';
-  vBCD_START := 0;
-  vBATCH_NO := 0;
+        vresult      VARCHAR2(1000);
+        vbth_info    VARCHAR2(10);
+        vbcd_start   NUMBER(6);
+        vbatch_no    NUMBER(8);
+        vsep         CHAR;
+    BEGIN
+        vresult := ' ';
+        vsep := ' ';
+        vbth_info := ' ';
+        vbcd_start := 0;
+        vbatch_no := 0;
+        vresult := '<BTH> '
+                   || rpad(vbth_info, 10)
+                   || vsep
+                   || lpad(vbcd_start, 6, '0')
+                   || vsep
+                   || lpad(vbatch_no, 8, '0');
 
-  vResult := '<BTH> '||
-    rpad(vBTH_INFO,10)||vSep||
-    lpad(vBCD_START,6,'0')||vSep||
-    lpad(vBATCH_NO,8,'0');
+        RETURN vresult;
+    END bth;
 
-return vResult;
-end BTH;
+    FUNCTION elem (
+        pnrkompzlec   NUMBER,
+        pnrpoz        NUMBER,
+        pnrelem       NUMBER
+    ) RETURN VARCHAR2 AS
 
-FUNCTION ELEM (pNrKompZlec number, pNrPoz number, pNrElem number) RETURN VARCHAR2 
-as
-  cursor c1 is  
-    select * from v_zlec_mon vzm WHERE vzm.nr_kom_zlec=pNrKompZlec and vzm.nr_poz=pNrPoz and vzm.nr_el_wew=pNrElem;
-  vzm v_zlec_mon%rowtype;
+        CURSOR c1 IS
+        SELECT
+            *
+        FROM
+            v_zlec_mon vzm
+        WHERE
+            vzm.nr_kom_zlec = pnrkompzlec
+            AND vzm.nr_poz = pnrpoz
+            AND vzm.nr_el_wew = pnrelem;
+
+        vzm                v_zlec_mon%rowtype;
 
 --  vGrub number;
-  vCzyPow number;
+        vczypow            NUMBER;
 --  vNrKat number;
-  vCzyOrn number;
-  vZnaczPr varchar2(4);
-  vOznRamki char;
-  vResult varchar2(1000);
-
-  cg number;
-  cf number;
-
-  vGLX_ITEM_INX number(5);
-  vGLX_DESCRIPT varchar2(40);
-  vGLX_SURFACE number(1);
-  vGLX_THICKNESS number(5);
-  vGLX_FACE_SIDE number(1);
-  vGLX_IDENT varchar2(10);
-  vGLX_PATT_DIR number(1);
-  vGLX_PANE_BCD varchar2(10);
-  vGLX_PROD_PANE number(1);
-  vGLX_PROD_COMP number(2);
-  vGLX_CATEGORY number(2);
-
-  vFRX_ITEM_INX number(5);
-  vFRX_DESCRIPTION varchar2(40);
-  vFRX_TYPE number(2);
-  vFRX_COLOR number(2);
-  vFRX_WIDTH number(5);
-  vFRX_HEIGHT number(5);
-  vFRX_IDENT varchar2(10);
-
-  vSep char;
-begin
-  vResult := ' ';
-  vSep := ' ';
-  cg := 0;
-  cf := 0;
+        vczyorn            NUMBER;
+        vznaczpr           VARCHAR2(4);
+        voznramki          CHAR;
+        vresult            VARCHAR2(1000);
+        cg                 NUMBER;
+        cf                 NUMBER;
+        vglx_item_inx      NUMBER(5);
+        vglx_descript      VARCHAR2(40);
+        vglx_surface       NUMBER(1);
+        vglx_thickness     NUMBER(5);
+        vglx_face_side     NUMBER(1);
+        vglx_ident         VARCHAR2(10);
+        vglx_patt_dir      NUMBER(1);
+        vglx_pane_bcd      VARCHAR2(10);
+        vglx_prod_pane     NUMBER(1);
+        vglx_prod_comp     NUMBER(2);
+        vglx_category      NUMBER(2);
+        vfrx_item_inx      NUMBER(5);
+        vfrx_description   VARCHAR2(40);
+        vfrx_type          NUMBER(2);
+        vfrx_color         NUMBER(2);
+        vfrx_width         NUMBER(5);
+        vfrx_height        NUMBER(5);
+        vfrx_ident         VARCHAR2(10);
+        vsep               CHAR;
+    BEGIN
+        vresult := ' ';
+        vsep := ' ';
+        cg := 0;
+        cf := 0;
 
 -- Pobierz dane z widoku v_zlec_mon
-  OPEN c1;
-  LOOP
-    FETCH c1 INTO vzm;
-    EXIT WHEN c1%NOTFOUND; 
-    vCzyOrn := 0;
+        OPEN c1;
+        LOOP
+            FETCH c1 INTO vzm;
+            EXIT WHEN c1%notfound;
+            vczyorn := 0;
 
 -- gdy warstwwa szkla
-    if pNrElem mod 2 = 1 then
-      cg := floor(pNrElem/2)+1;
-      if vzm.nr_kat>0 then
-        select NVL(substr(k.naz_kat,1,40),' '),decode(Substr(k.typ_kat,2,1),'O',1,0),k.znacz_pr into vGLX_DESCRIPT,vCzyOrn,vZnaczPr from katalog k where k.nr_kat=vzm.nr_kat;
-      else 
-        vGLX_DESCRIPT := vzm.typ_kat||' '||vzm.grub;
-      end if;
-      vGLX_ITEM_INX := 0;
+            IF pnrelem MOD 2 = 1 THEN
+                cg := floor(pnrelem / 2) + 1;
+                IF vzm.nr_kat > 0 THEN
+                    SELECT
+                        nvl(substr(k.naz_kat, 1, 40), ' '),
+                        decode(substr(k.typ_kat, 2, 1), 'O', 1, 0),
+                        k.znacz_pr
+                    INTO
+                        vglx_descript,
+                        vczyorn,
+                        vznaczpr
+                    FROM
+                        katalog k
+                    WHERE
+                        k.nr_kat = vzm.nr_kat;
 
+                ELSE
+                    vglx_descript := vzm.typ_kat
+                                     || ' '
+                                     || vzm.grub;
+                END IF;
 
-      if vzm.powL>0 or vzm.powR>0 then vGLX_SURFACE := 1;
-      elsif vCzyOrn=1 then vGLX_SURFACE := 2;
-      else vGLX_SURFACE := 0;
-      end if;
+                vglx_item_inx := 0;
+                IF vzm.powl > 0 OR vzm.powr > 0 THEN
+                    vglx_surface := 1;
+                ELSIF vczyorn = 1 THEN
+                    vglx_surface := 2;
+                ELSE
+                    vglx_surface := 0;
+                END IF;
 
-      vGLX_THICKNESS := round(vzm.grub*10);
+                vglx_thickness := round(vzm.grub * 10);
+                IF vzm.powl > 0 THEN
+                    vglx_face_side := 2;
+                ELSIF vzm.powr > 0 THEN
+                    vglx_face_side := 1;
+                ELSE
+                    vglx_face_side := 0;
+                END IF;
 
-      if vzm.powL>0 then vGLX_FACE_SIDE := 2;
-      elsif vzm.powR>0 then vGLX_FACE_SIDE := 1;
-      else vGLX_FACE_SIDE := 0;
-      end if;
+                vglx_ident := ' ';
+                vglx_patt_dir := 0;
+                vglx_pane_bcd := ' ';
+                vglx_prod_pane := 0;
+                vglx_prod_comp := 0;
+                IF vzm.typ_kat = 'LAMINAT' OR vznaczpr = '9.La' THEN
+                    vglx_category := 2;
+                ELSE
+                    vglx_category := 1;
+                END IF;
 
-      vGLX_IDENT := ' ' ;
-      vGLX_PATT_DIR := 0;
-      vGLX_PANE_BCD := ' ';
-      vGLX_PROD_PANE := 0;
-      vGLX_PROD_COMP := 0;
+                vresult := '<GL'
+                           || cg
+                           || '> '
+                           || lpad(vglx_item_inx, 5, '0')
+                           || vsep
+                           || rpad(vglx_descript, 40)
+                           || vsep
+                           || vglx_surface
+                           || vsep
+                           || lpad(vglx_thickness, 5, '0')
+                           || vsep
+                           || vglx_face_side
+                           || vsep
+                           || rpad(vglx_ident, 10)
+                           || vsep
+                           || vglx_patt_dir
+                           || vsep
+                           || rpad(vglx_pane_bcd, 10)
+                           || vsep
+                           || vglx_prod_pane
+                           || vsep
+                           || lpad(vglx_prod_comp, 2, '0')
+                           || vsep
+                           || lpad(vglx_category, 2, '0');
 
-      if vzm.typ_kat='LAMINAT' or vZnaczPr='9.La' then vGLX_CATEGORY := 2;
-      else vGLX_CATEGORY := 1;
-      END IF;
-
-      vResult := '<GL'||cg||'> '||
-        LPad(vGLX_ITEM_INX,5,'0')||vSep||
-        rpad(vGLX_DESCRIPT,40)||vSep||
-        vGLX_SURFACE||vSep||
-        LPad(vGLX_THICKNESS,5,'0')||vSep||
-        vGLX_FACE_SIDE||vSep||
-        rpad(vGLX_IDENT,10)||vSep||
-        vGLX_PATT_DIR||vSep||
-        rpad(vGLX_PANE_BCD,10)||vSep||
-        vGLX_PROD_PANE||vSep||
-        LPad(vGLX_PROD_COMP,2,'0')||vSep||
-        LPad(vGLX_CATEGORY,2,'0');
-
-    end if;
+            END IF;
 -- gdy warstwa ramki
-    if pNrElem mod 2 = 0 then
-      vFRX_ITEM_INX := 0;
 
-      cg := floor(pNrElem/2);
-      if vzm.nr_kat>0 then
-        select NVL(substr(k.naz_kat,1,40),' '),nvl(grubosc*10,0),nvl(bok_od*10,0) into vFRX_DESCRIPTION,vFRX_WIDTH,vFRX_HEIGHT from katalog k where k.nr_kat=vzm.nr_kat;
-      else 
-        vFRX_DESCRIPTION := ' ';
-        vFRX_WIDTH := 0;
-        vFRX_HEIGHT := 0;
-      end if;
+            IF pnrelem MOD 2 = 0 THEN
+                vfrx_item_inx := 0;
+                cg := floor(pnrelem / 2);
+                IF vzm.nr_kat > 0 THEN
+                    SELECT
+                        nvl(substr(k.naz_kat, 1, 40), ' '),
+                        nvl(grubosc * 10, 0),
+                        nvl(bok_od * 10, 0)
+                    INTO
+                        vfrx_description,
+                        vfrx_width,
+                        vfrx_height
+                    FROM
+                        katalog k
+                    WHERE
+                        k.nr_kat = vzm.nr_kat;
 
-      vOznRamki := Substr(vzm.typ_kat,2,1);
-      IF vOznRamki='A' then vFRX_TYPE := 0;
-      ELSIF vOznRamki='C' then vFRX_TYPE := 0;
-      ELSIF vOznRamki='E' then vFRX_TYPE := 0;
-      ELSIF vOznRamki='G' then vFRX_TYPE := 3;
-      ELSIF vOznRamki='H' then vFRX_TYPE := 0;
-      ELSIF vOznRamki='M' then vFRX_TYPE := 0;
-      ELSIF vOznRamki='N' then vFRX_TYPE := 0;
-      ELSIF vOznRamki='P' then vFRX_TYPE := 0;
-      ELSIF vOznRamki='S' then vFRX_TYPE := 3;
-      ELSIF vOznRamki='T' then vFRX_TYPE := 0;
-      ELSIF vOznRamki='W' then vFRX_TYPE := 0;
-      else vFRX_TYPE :=0;
-      END IF;
+                ELSE
+                    vfrx_description := ' ';
+                    vfrx_width := 0;
+                    vfrx_height := 0;
+                END IF;
 
-      vFRX_COLOR := 0;
-      vFRX_IDENT := '0';
+                voznramki := substr(vzm.typ_kat, 2, 1);
+                IF voznramki = 'A' THEN
+                    vfrx_type := 0;
+                ELSIF voznramki = 'C' THEN
+                    vfrx_type := 0;
+                ELSIF voznramki = 'E' THEN
+                    vfrx_type := 0;
+                ELSIF voznramki = 'G' THEN
+                    vfrx_type := 3;
+                ELSIF voznramki = 'H' THEN
+                    vfrx_type := 0;
+                ELSIF voznramki = 'M' THEN
+                    vfrx_type := 0;
+                ELSIF voznramki = 'N' THEN
+                    vfrx_type := 0;
+                ELSIF voznramki = 'P' THEN
+                    vfrx_type := 0;
+                ELSIF voznramki = 'S' THEN
+                    vfrx_type := 3;
+                ELSIF voznramki = 'T' THEN
+                    vfrx_type := 0;
+                ELSIF voznramki = 'W' THEN
+                    vfrx_type := 0;
+                ELSE
+                    vfrx_type := 0;
+                END IF;
 
-      vResult := '<FR'||cg||'> '||
-        LPad(vFRX_ITEM_INX,5,'0')||vSep||
-        rpad(vFRX_DESCRIPTION,40)||vSep||
-        LPad(vFRX_TYPE,2,'0')||vSep||
-        LPad(vFRX_COLOR,2,'0')||vSep||
-        LPad(vFRX_WIDTH,5,'0')||vSep||
-        LPad(vFRX_HEIGHT,5,'0')||vSep||
-        rpad(vFRX_IDENT,10);
-    end if;
-  end loop;
-  close c1;
+                vfrx_color := 0;
+                vfrx_ident := '0';
+                vresult := '<FR'
+                           || cg
+                           || '> '
+                           || lpad(vfrx_item_inx, 5, '0')
+                           || vsep
+                           || rpad(vfrx_description, 40)
+                           || vsep
+                           || lpad(vfrx_type, 2, '0')
+                           || vsep
+                           || lpad(vfrx_color, 2, '0')
+                           || vsep
+                           || lpad(vfrx_width, 5, '0')
+                           || vsep
+                           || lpad(vfrx_height, 5, '0')
+                           || vsep
+                           || rpad(vfrx_ident, 10);
 
-return vResult;
-end elem;
+            END IF;
 
+        END LOOP;
 
-FUNCTION ORD (pNrKompZlec number) RETURN VARCHAR2 
-as
-  vResult varchar2(1000);
+        CLOSE c1;
+        RETURN vresult;
+    END elem;
 
-  vORD varchar2(10);
-  vCUST_NUM varchar2(10);
-  vCUST_NAME varchar2(40);
-  vTEXT1 varchar2(40);
-  vTEXT2 varchar2(40);
-  vTEXT3 varchar2(40);
-  vTEXT4 varchar2(40);
-  vTEXT5 varchar2(40);
-  vPRD_DATE varchar2(10);
-  vDEL_DATE varchar2(10);
-  vDEL_AREA varchar2(10);
+    FUNCTION ord (
+        pnrkompzlec NUMBER
+    ) RETURN VARCHAR2 AS
 
-  vSep char;
-begin
-  vResult := ' ';
-  vSep := ' ';
+        vresult      VARCHAR2(1000);
+        vord         VARCHAR2(10);
+        vcust_num    VARCHAR2(10);
+        vcust_name   VARCHAR2(40);
+        vtext1       VARCHAR2(40);
+        vtext2       VARCHAR2(40);
+        vtext3       VARCHAR2(40);
+        vtext4       VARCHAR2(40);
+        vtext5       VARCHAR2(40);
+        vprd_date    VARCHAR2(10);
+        vdel_date    VARCHAR2(10);
+        vdel_area    VARCHAR2(10);
+        vsep         CHAR;
+    BEGIN
+        vresult := ' ';
+        vsep := ' ';
+        SELECT
+            z.nr_zlec   ord,
+            z.nr_kon    cust_num,
+            k.skrot_k   cust_nam,
+            ' ' text1,
+            ' ' text2,
+            ' ' text3,
+            ' ' text4,
+            ' ' text5,
+            to_char(z.d_plan, 'DD/MM/YYYY') prd_date,
+            to_char(z.d_pl_sped, 'DD/MM/YYYY') del_date,
+            ' ' del_area
+        INTO
+            vord,
+            vcust_num,
+            vcust_name,
+            vtext1,
+            vtext2,
+            vtext3,
+            vtext4,
+            vtext5,
+            vprd_date,
+            vdel_date,
+            vdel_area
+        FROM
+            zamow    z
+            LEFT JOIN klient   k ON k.nr_kon = z.nr_kon
+        WHERE
+            z.nr_kom_zlec = pnrkompzlec;
 
+        vresult := '<ORD> '
+                   || rpad(vord, 10)
+                   || vsep
+                   || rpad(vcust_num, 10)
+                   || vsep
+                   || rpad(vcust_name, 40)
+                   || vsep
+                   || rpad(vtext1, 40)
+                   || vsep
+                   || rpad(vtext2, 40)
+                   || vsep
+                   || rpad(vtext3, 40)
+                   || vsep
+                   || rpad(vtext4, 40)
+                   || vsep
+                   || rpad(vtext5, 40)
+                   || vsep
+                   || rpad(vprd_date, 10)
+                   || vsep
+                   || rpad(vdel_date, 10)
+                   || vsep
+                   || rpad(vdel_area, 10);
 
-  select 
-    z.nr_zlec ORD,
-    z.nr_kon CUST_NUM,
-    k.skrot_k CUST_NAM,
-    ' ' TEXT1,
-    ' ' TEXT2,
-    ' ' TEXT3,
-    ' ' TEXT4,
-    ' ' TEXT5,
-    to_char(z.d_plan,'DD/MM/YYYY') PRD_DATE,
-    to_char(z.d_pl_sped,'DD/MM/YYYY') DEL_DATE,
-    ' ' DEL_AREA
-  into  vORD, vCUST_NUM, vCUST_NAME, 
-        vTEXT1, vTEXT2, vTEXT3, vTEXT4, vTEXT5,
-        vPRD_DATE, vDEL_DATE, vDEL_AREA
-  from zamow z
-  left join klient k on k.nr_kon=z.nr_kon
-  where z.nr_kom_zlec=pNrKompZlec;
+        RETURN vresult;
+    END ord;
 
+    FUNCTION pos (
+        pnrkompzlec   NUMBER,
+        pnrpoz        NUMBER,
+        pnrszt        NUMBER
+    ) RETURN VARCHAR2 AS
 
-  vResult := '<ORD> '||
-    rpad(vORD,10)||vSep||
-    rpad(vCUST_NUM,10)||vSep||
-    rpad(vCUST_NAME,40)||vSep||
-    rpad(vTEXT1,40)||vSep||
-    rpad(vTEXT2,40)||vSep||
-    rpad(vTEXT3,40)||vSep||
-    rpad(vTEXT4,40)||vSep||
-    rpad(vTEXT5,40)||vSep||
-    rpad(vPRD_DATE,10)||vSep||
-    rpad(vDEL_DATE,10)||vSep||
-    rpad(vDEL_AREA,10);
+        CURSOR c1 IS
+        SELECT
+            *
+        FROM
+            v_zlec_mon vzm
+        WHERE
+            vzm.nr_kom_zlec = pnrkompzlec
+            AND vzm.nr_poz = pnrpoz;
 
-return vResult;
-end ORD;
-
-FUNCTION POS (pNrKompZlec number, pNrPoz number, pNrSzt number) RETURN VARCHAR2 
-as
-  cursor c1 is  
-    select * from v_zlec_mon vzm WHERE vzm.nr_kom_zlec=pNrKompZlec and vzm.nr_poz=pNrPoz;
-  vzm v_zlec_mon%rowtype;
-  vGrub number;
-  vCzyPow number;
-  vNrKat number;
-  vCzyOrn number;
-  vResult varchar2(1000);
-
-  type glassa_t is varray(9) of varchar2(5);
-  type gasa_t is varray(4) of number;
-  glassa glassa_t := glassa_t(' ',' ',' ',' ',' ',' ',' ',' ',' ');
-  gasa gasa_t := gasa_t(0,0,0,0);
-  c number;
-
-  vITEM_NUM number(5);
-  vID_NUM varchar2(8);
-  vBARCODE number(4);
-  vQTY number(5);
-  vWIDTH number(5);
-  vHEIGHT number(5);
-  vINSET number(3);
-  vFRAME_TXT number(2);
-  vSEAL_TYPE number(1);
-  vFRAH_TYPE number(1);
-  vFRAH_HOE number(5);
-  vPATT_DIR number(1);
-  vDGU_PANE number(1);
-
-  vSep char;
-begin
-  vResult := ' ';
-  vSep := ' ';
-  c := 0;
+        vzm          v_zlec_mon%rowtype;
+        vgrub        NUMBER;
+        vczypow      NUMBER;
+        vnrkat       NUMBER;
+        vczyorn      NUMBER;
+        vresult      VARCHAR2(1000);
+        TYPE glassa_t IS
+            VARRAY(9) OF VARCHAR2(5);
+        TYPE gasa_t IS
+            VARRAY(4) OF NUMBER;
+        glassa       glassa_t := glassa_t(' ', ' ', ' ', ' ', ' ',
+         ' ', ' ', ' ', ' ');
+        gasa         gasa_t := gasa_t(0, 0, 0, 0);
+        c            NUMBER;
+        vitem_num    NUMBER(5);
+        vid_num      VARCHAR2(8);
+        vbarcode     NUMBER(4);
+        vqty         NUMBER(5);
+        vwidth       NUMBER(5);
+        vheight      NUMBER(5);
+        vinset       NUMBER(3);
+        vframe_txt   NUMBER(2);
+        vseal_type   NUMBER(1);
+        vfrah_type   NUMBER(1);
+        vfrah_hoe    NUMBER(5);
+        vpatt_dir    NUMBER(1);
+        vdgu_pane    NUMBER(1);
+        vsep         CHAR;
+    BEGIN
+        vresult := ' ';
+        vsep := ' ';
+        c := 0;
 
 -- Pobierz dane z widoku v_zlec_mon
-  OPEN c1;
-  LOOP
-    FETCH c1 INTO vzm;
-    EXIT WHEN c1%NOTFOUND; 
-    c := c+1;
-    vCzyOrn := 0;
-    glassa(c) := to_char(round(vzm.grub,0));
+        OPEN c1;
+        LOOP
+            FETCH c1 INTO vzm;
+            EXIT WHEN c1%notfound;
+            c := c + 1;
+            vczyorn := 0;
+            glassa(c) := to_char(round(vzm.grub, 0));
 
 -- gdy warstwwa szkla
-    if c mod 2 = 1 then
-      if vzm.nr_kat>0 then
-        select decode(Substr(typ_kat,2,1),'O',1,0) into vCzyOrn from katalog where nr_kat=vzm.nr_kat;
-      end if;
+            IF c MOD 2 = 1 THEN
+                IF vzm.nr_kat > 0 THEN
+                    SELECT
+                        decode(substr(typ_kat, 2, 1), 'O', 1, 0)
+                    INTO vczyorn
+                    FROM
+                        katalog
+                    WHERE
+                        nr_kat = vzm.nr_kat;
 
-      if vzm.powL>0 or vzm.powR>0 then glassa(c) := glassa(c)||'-1';
-      elsif vCzyOrn=1 then glassa(c) := glassa(c)||'-2';
-      else glassa(c) := glassa(c)||'-0';
-      end if;
-    end if;
+                END IF;
+
+                IF vzm.powl > 0 OR vzm.powr > 0 THEN
+                    glassa(c) := glassa(c)
+                                 || '-1';
+                ELSIF vczyorn = 1 THEN
+                    glassa(c) := glassa(c)
+                                 || '-2';
+                ELSE
+                    glassa(c) := glassa(c)
+                                 || '-0';
+                END IF;
+
+            END IF;
 -- gdy warstwa ramki
-    if c mod 2 = 0 then
-      if vzm.gaz='A' then 
-        gasa(c / 2) := 1;
-      elsif vzm.gaz='K' then
-        gasa(c / 2) := 2;
-      else
-        gasa(c / 2) := 0;
-      end if;
-      glassa(c) := Substr(vzm.typ_kat,2,1)||glassa(c);
-      if substr(vzm.ind_bud,13,1)=1 then
-        vSEAL_TYPE := 9;
-      elsif vzm.silikon=1 then
-        vSEAL_TYPE := 1;
-      else 
-        vSEAL_TYPE := 0;
-      end if;
-    end if;
-  end loop;
-  close c1;
 
+            IF c MOD 2 = 0 THEN
+                IF vzm.gaz = 'A' THEN
+                    gasa(c / 2) := 1;
+                ELSIF vzm.gaz = 'K' THEN
+                    gasa(c / 2) := 2;
+                ELSE
+                    gasa(c / 2) := 0;
+                END IF;
 
-  select 
-    p.nr_poz ITEM_NUM,
-    k.rack_no ID_NUM,
-    0 BARCODE,
-    1 QTY,
-    p.szer WIDTH,
-    p.wys HEIGHT,
-    decode(p.GR_SIL,0,45,p.GR_SIL*10) INSET,
-    0 FRAME_TXT,
-    0 FRAH_TYPE,
-    0 FRAH_HOE,
-    0 PATT_DIR,
-    0 DGU_PANE
-  into  vITEM_NUM,vID_NUM,vBARCODE,vQTY,vWIDTH,vHEIGHT,
-        vINSET,vFRAME_TXT,
-        vFRAH_TYPE,vFRAH_HOE,vPATT_DIR,vDGU_PANE
-  from spisz p
-  left join struktury s on s.kod_str=p.kod_str
-  left join kol_stojakow k on k.nr_komp_zlec=p.nr_kom_zlec and k.nr_poz=p.nr_poz and k.nr_sztuki=pNrSzt and k.nr_warstwy=1
-  where p.nr_kom_zlec=pNrKompZlec and p.nr_poz=pNrPoz;
+                glassa(c) := substr(vzm.typ_kat, 2, 1)
+                             || glassa(c);
 
-  vResult := '<POS> '||
-    LPad(vITEM_NUM,5,'0')||vSep||
-    rpad(vID_NUM,8)||vSep||
-    lpad(vBARCODE,4,'0')||vSep||
-    lpad(vQTY,5,'0')||vSep||
-    lpad(vWIDTH*10,5,'0')||vSep||
-    lpad(vHEIGHT*10,5,'0')||vSep||
-    rpad(glassa(1),5)||vSep||
-    rpad(glassa(2),3)||vSep||
-    rpad(glassa(3),5)||vSep||
-    rpad(glassa(4),3)||vSep||
-    rpad(glassa(5),5)||vSep||
-    rpad(glassa(6),3)||vSep||
-    rpad(glassa(7),5)||vSep||
-    rpad(glassa(8),3)||vSep||
-    rpad(glassa(9),5)||vSep||
-    lpad(vINSET,3,'0')||vSep||
-    lpad(vFRAME_TXT,2,'0')||vSep||
-    lpad(gasa(1),2,'0')||vSep||
-    lpad(gasa(2),2,'0')||vSep||
-    lpad(gasa(3),2,'0')||vSep||
-    lpad(gasa(4),2,'0')||vSep||
-    vSEAL_TYPE||vSep||
-    vFRAH_TYPE||vSep||
-    lpad(vFRAH_HOE,5,'0')||vSep||
-    vPATT_DIR||vSep||
-    vDGU_PANE;
+                IF substr(vzm.ind_bud, 13, 1) = 1 THEN
+                    vseal_type := 9;
+                ELSIF vzm.silikon = 1 THEN
+                    vseal_type := 1;
+                ELSE
+                    vseal_type := 0;
+                END IF;
 
-return vResult;
-end pos;
+            END IF;
 
-FUNCTION REL RETURN VARCHAR2 
-as
-  vResult varchar2(1000);
+        END LOOP;
 
-  vREL_NUM varchar2(5);
-  vREL_INFO varchar2(40);
+        CLOSE c1;
+        SELECT
+            p.nr_poz    item_num,
+            k.rack_no   id_num,
+            0 barcode,
+            1 qty,
+            p.szer      width,
+            p.wys       height,
+            decode(p.gr_sil, 0, 45, p.gr_sil * 10) inset,
+            0 frame_txt,
+            0 frah_type,
+            0 frah_hoe,
+            0 patt_dir,
+            0 dgu_pane
+        INTO
+            vitem_num,
+            vid_num,
+            vbarcode,
+            vqty,
+            vwidth,
+            vheight,
+            vinset,
+            vframe_txt,
+            vfrah_type,
+            vfrah_hoe,
+            vpatt_dir,
+            vdgu_pane
+        FROM
+            spisz          p
+            LEFT JOIN struktury      s ON s.kod_str = p.kod_str
+            LEFT JOIN kol_stojakow   k ON k.nr_komp_zlec = p.nr_kom_zlec
+                                        AND k.nr_poz = p.nr_poz
+                                        AND k.nr_sztuki = pnrszt
+                                        AND k.nr_warstwy = 1
+        WHERE
+            p.nr_kom_zlec = pnrkompzlec
+            AND p.nr_poz = pnrpoz;
 
-  vSep char;
-begin
-  vResult := ' ';
-  vSep := ' ';
+        vresult := '<POS> '
+                   || lpad(vitem_num, 5, '0')
+                   || vsep
+                   || rpad(vid_num, 8)
+                   || vsep
+                   || lpad(vbarcode, 4, '0')
+                   || vsep
+                   || lpad(vqty, 5, '0')
+                   || vsep
+                   || lpad(vwidth * 10, 5, '0')
+                   || vsep
+                   || lpad(vheight * 10, 5, '0')
+                   || vsep
+                   || rpad(glassa(1), 5)
+                   || vsep
+                   || rpad(glassa(2), 3)
+                   || vsep
+                   || rpad(glassa(3), 5)
+                   || vsep
+                   || rpad(glassa(4), 3)
+                   || vsep
+                   || rpad(glassa(5), 5)
+                   || vsep
+                   || rpad(glassa(6), 3)
+                   || vsep
+                   || rpad(glassa(7), 5)
+                   || vsep
+                   || rpad(glassa(8), 3)
+                   || vsep
+                   || rpad(glassa(9), 5)
+                   || vsep
+                   || lpad(vinset, 3, '0')
+                   || vsep
+                   || lpad(vframe_txt, 2, '0')
+                   || vsep
+                   || lpad(gasa(1), 2, '0')
+                   || vsep
+                   || lpad(gasa(2), 2, '0')
+                   || vsep
+                   || lpad(gasa(3), 2, '0')
+                   || vsep
+                   || lpad(gasa(4), 2, '0')
+                   || vsep
+                   || vseal_type
+                   || vsep
+                   || vfrah_type
+                   || vsep
+                   || lpad(vfrah_hoe, 5, '0')
+                   || vsep
+                   || vpatt_dir
+                   || vsep
+                   || vdgu_pane;
 
-  vREL_NUM := '02.80';
-  vREL_INFO := 'SIP - Transfer Cutter 2000';
+        RETURN vresult;
+    END pos;
 
-  vResult := '<REL> '||
-    rpad(vREL_NUM,10)||vSep||
-    rpad(vREL_INFO,40);
+    FUNCTION rel RETURN VARCHAR2 AS
 
-return vResult;
-end REL;
+        vresult     VARCHAR2(1000);
+        vrel_num    VARCHAR2(5);
+        vrel_info   VARCHAR2(40);
+        vsep        CHAR;
+    BEGIN
+        vresult := ' ';
+        vsep := ' ';
+        vrel_num := '02.80';
+        vrel_info := 'SIP - Transfer Cutter 2000';
+        vresult := '<REL> '
+                   || rpad(vrel_num, 10)
+                   || vsep
+                   || rpad(vrel_info, 40);
 
-FUNCTION SHP (pNrKompZlec number, pNrPoz number, pNrElem number) RETURN VARCHAR2 
-as
-  cursor c1 is  
-    select * from v_zlec_mon vzm WHERE vzm.nr_kom_zlec=pNrKompZlec and vzm.nr_poz=pNrPoz and vzm.nr_el_wew=pNrElem;
-  vzm v_zlec_mon%rowtype;
+        RETURN vresult;
+    END rel;
 
-  vResult varchar2(1000);
+    FUNCTION shp (
+        pnrkompzlec   NUMBER,
+        pnrpoz        NUMBER,
+        pnrelem       NUMBER
+    ) RETURN VARCHAR2 AS
 
-  cg number;
+        CURSOR c1 IS
+        SELECT
+            *
+        FROM
+            v_zlec_mon vzm
+        WHERE
+            vzm.nr_kom_zlec = pnrkompzlec
+            AND vzm.nr_poz = pnrpoz
+            AND vzm.nr_el_wew = pnrelem;
 
-  vSHP_PANE number(1):=0;
-  vSHP_DEF number(1):=0;
-  vSHP_CAT number(1):=0;
-  vSHP_NUM number(3):=0;
-  vSHP_LEN number(5):=0;
-  vSHP_LEN1 number(5):=0;
-  vSHP_LEN2 number(5):=0;
-  vSHP_HGT number(5):=0;
-  vSHP_HGT1 number(5):=0;
-  vSHP_HGT2 number(5):=0;
-  vSHP_RAD number(5):=0;
-  vSHP_RAD1 number(5):=0;
-  vSHP_RAD2 number(5):=0;
-  vSHP_RAD3 number(5):=0;
-  vSHP_TRIM1 number(5):=0;
-  vSHP_TRIM2 number(5):=0;
-  vSHP_TRIM3 number(5):=0;
-  vSHP_TRIM4 number(5):=0;
-  vSHP_EDGE1 number(5):=0;
-  vSHP_EDGE2 number(5):=0;
-  vSHP_EDGE3 number(5):=0;
-  vSHP_EDGE4 number(5):=0;
-  vSHP_EDGE5 number(5):=0;
-  vSHP_EDGE6 number(5):=0;
-  vSHP_EDGE7 number(5):=0;
-  vSHP_EDGE8 number(5):=0;
-  vSHP_PATH varchar2(40):=' ';
-  vSHP_FILE varchar2(40):=' ';
-  vSHP_NAME varchar2(40):=' ';
-  vSHP_MIRR number(1):=0;
-  vSHP_BASE number(1):=0;
-
-  vSep char;
-begin
-  vResult := ' ';
-  vSep := ' ';
-  cg := 0;
+        vzm          v_zlec_mon%rowtype;
+        vresult      VARCHAR2(1000);
+        cg           NUMBER;
+        vshp_pane    NUMBER(1) := 0;
+        vshp_def     NUMBER(1) := 0;
+        vshp_cat     NUMBER(1) := 0;
+        vshp_num     NUMBER(3) := 0;
+        vshp_len     NUMBER(5) := 0;
+        vshp_len1    NUMBER(5) := 0;
+        vshp_len2    NUMBER(5) := 0;
+        vshp_hgt     NUMBER(5) := 0;
+        vshp_hgt1    NUMBER(5) := 0;
+        vshp_hgt2    NUMBER(5) := 0;
+        vshp_rad     NUMBER(5) := 0;
+        vshp_rad1    NUMBER(5) := 0;
+        vshp_rad2    NUMBER(5) := 0;
+        vshp_rad3    NUMBER(5) := 0;
+        vshp_trim1   NUMBER(5) := 0;
+        vshp_trim2   NUMBER(5) := 0;
+        vshp_trim3   NUMBER(5) := 0;
+        vshp_trim4   NUMBER(5) := 0;
+        vshp_edge1   NUMBER(5) := 0;
+        vshp_edge2   NUMBER(5) := 0;
+        vshp_edge3   NUMBER(5) := 0;
+        vshp_edge4   NUMBER(5) := 0;
+        vshp_edge5   NUMBER(5) := 0;
+        vshp_edge6   NUMBER(5) := 0;
+        vshp_edge7   NUMBER(5) := 0;
+        vshp_edge8   NUMBER(5) := 0;
+        vshp_path    VARCHAR2(40) := ' ';
+        vshp_file    VARCHAR2(40) := ' ';
+        vshp_name    VARCHAR2(40) := ' ';
+        vshp_mirr    NUMBER(1) := 0;
+        vshp_base    NUMBER(1) := 0;
+        vsep         CHAR;
+    BEGIN
+        vresult := ' ';
+        vsep := ' ';
+        cg := 0;
 
 -- Pobierz dane z widoku v_zlec_mon
-  OPEN c1;
-  LOOP
-    FETCH c1 INTO vzm;
-    EXIT WHEN c1%NOTFOUND; 
+        OPEN c1;
+        LOOP
+            FETCH c1 INTO vzm;
+            EXIT WHEN c1%notfound; 
 
 -- gdy warstwwa szkla
-    if pNrElem mod 2 = 1 then
-      cg := floor(pNrElem/2)+1;
+            IF pnrelem MOD 2 = 1 THEN
+                cg := floor(pnrelem / 2) + 1;
+                vshp_pane := 0;
+                vshp_def := 0;
+                vshp_cat := 0;
+                vshp_num := 0;
+                vshp_len := 0;
+                vshp_len1 := 0;
+                vshp_len2 := 0;
+                vshp_hgt := 0;
+                vshp_hgt1 := 0;
+                vshp_hgt2 := 0;
+                vshp_rad := 0;
+                vshp_rad1 := 0;
+                vshp_rad2 := 0;
+                vshp_rad3 := 0;
+                vshp_trim1 := 0;
+                vshp_trim2 := 0;
+                vshp_trim3 := 0;
+                vshp_trim4 := 0;
+                vshp_edge1 := 0;
+                vshp_edge2 := 0;
+                vshp_edge3 := 0;
+                vshp_edge4 := 0;
+                vshp_edge5 := 0;
+                vshp_edge6 := 0;
+                vshp_edge7 := 0;
+                vshp_edge8 := 0;
+                vshp_path := ' ';
+                vshp_file := ' ';
+                vshp_name := ' ';
+                vshp_mirr := 0;
+                vshp_base := 0;
+                vshp_pane := cg;
+                IF cg = 1 THEN
+                    vshp_def := 0;
+                    vshp_len := nvl(vzm.szer, 0);
+                    vshp_hgt := nvl(vzm.wys, 0);
+                    IF ( to_number(strtoken(vzm.par_kszt, 2, ':'), '999') > 0 ) THEN
+                        vshp_cat := to_number(strtoken(vzm.par_kszt, 1, ':'), '9');
 
-      vSHP_PANE :=0;
-      vSHP_DEF :=0;
-      vSHP_CAT :=0;
-      vSHP_NUM :=0;
-      vSHP_LEN :=0;
-      vSHP_LEN1 :=0;
-      vSHP_LEN2 :=0;
-      vSHP_HGT :=0;
-      vSHP_HGT1 :=0;
-      vSHP_HGT2 :=0;
-      vSHP_RAD :=0;
-      vSHP_RAD1 :=0;
-      vSHP_RAD2 :=0;
-      vSHP_RAD3 :=0;
-      vSHP_TRIM1 :=0;
-      vSHP_TRIM2 :=0;
-      vSHP_TRIM3 :=0;
-      vSHP_TRIM4 :=0;
-      vSHP_EDGE1 :=0;
-      vSHP_EDGE2 :=0;
-      vSHP_EDGE3 :=0;
-      vSHP_EDGE4 :=0;
-      vSHP_EDGE5 :=0;
-      vSHP_EDGE6 :=0;
-      vSHP_EDGE7 :=0;
-      vSHP_EDGE8 :=0;
-      vSHP_PATH :=' ';
-      vSHP_FILE :=' ';
-      vSHP_NAME :=' ';
-      vSHP_MIRR :=0;
-      vSHP_BASE :=0;
+                        vshp_num := to_number(strtoken(vzm.par_kszt, 2, ':'), '999');
 
-      vSHP_PANE := cg;
-      if cg=1 then 
-        vSHP_DEF := 0;
-        vSHP_LEN := nvl(vzm.szer,0);
-        vSHP_HGT := nvl(vzm.wys,0);
-        if (to_number(strtoken(vzm.par_kszt,2,':'),'999')>0) then
-          vSHP_CAT := to_number(strtoken(vzm.par_kszt,1,':'),'9');
-          vSHP_NUM := to_number(strtoken(vzm.par_kszt,2,':'),'999');
-          vSHP_LEN1 :=to_number(strtoken(vzm.par_kszt,4,':'),'99999');
-          vSHP_LEN2 :=to_number(strtoken(vzm.par_kszt,5,':'),'99999');
-          vSHP_HGT1 :=to_number(strtoken(vzm.par_kszt,7,':'),'99999');
-          vSHP_HGT2 :=to_number(strtoken(vzm.par_kszt,8,':'),'99999');
-          vSHP_RAD :=to_number(strtoken(vzm.par_kszt,9,':'),'99999');
-          vSHP_RAD1 :=to_number(strtoken(vzm.par_kszt,10,':'),'99999');
-          vSHP_RAD2 :=to_number(strtoken(vzm.par_kszt,11,':'),'99999');
-          vSHP_RAD3 :=to_number(strtoken(vzm.par_kszt,12,':'),'99999');
-        end if;
-      else
-        vSHP_DEF := 2;
+                        vshp_len1 := to_number(strtoken(vzm.par_kszt, 4, ':'), '99999');
+
+                        vshp_len2 := to_number(strtoken(vzm.par_kszt, 5, ':'), '99999');
+
+                        vshp_hgt1 := to_number(strtoken(vzm.par_kszt, 7, ':'), '99999');
+
+                        vshp_hgt2 := to_number(strtoken(vzm.par_kszt, 8, ':'), '99999');
+
+                        vshp_rad := to_number(strtoken(vzm.par_kszt, 9, ':'), '99999');
+
+                        vshp_rad1 := to_number(strtoken(vzm.par_kszt, 10, ':'), '99999');
+
+                        vshp_rad2 := to_number(strtoken(vzm.par_kszt, 11, ':'), '99999');
+
+                        vshp_rad3 := to_number(strtoken(vzm.par_kszt, 12, ':'), '99999');
+
+                    END IF;
+
+                ELSE
+                    vshp_def := 2;
 --        vSHP_EDGE1 := Abs(vzm.max_stepD-vzm.stepD);
 --        vSHP_EDGE2 := Abs(vzm.max_stepP-vzm.stepP);
 --        vSHP_EDGE3 := Abs(vzm.max_stepG-vzm.stepG);
@@ -689,51 +907,82 @@ begin
 --        vSHP_EDGE2 := -vzm.stepP;
 --        vSHP_EDGE3 := -vzm.stepG;
 --        vSHP_EDGE4 := -vzm.stepL;
-        vSHP_EDGE1 := Abs(-vzm.stepD);
-        vSHP_EDGE2 := Abs(-vzm.stepP);
-        vSHP_EDGE3 := Abs(-vzm.stepG);
-        vSHP_EDGE4 := Abs(-vzm.stepL);
-      end if;
+                    vshp_edge1 := abs(-vzm.stepd);
+                    vshp_edge2 := abs(-vzm.stepp);
+                    vshp_edge3 := abs(-vzm.stepg);
+                    vshp_edge4 := abs(-vzm.stepl);
+                END IF;
 
-      vResult := '<SHP> '||
-        vSHP_PANE||vSep||
-        vSHP_DEF||vSep||
-        vSHP_CAT||vSep||
-        LPad(vSHP_NUM,3,'0')||vSep||
-        LPad(vSHP_LEN*10,5,'0')||vSep||
-        LPad(vSHP_LEN1*10,5,'0')||vSep||
-        LPad(vSHP_LEN2*10,5,'0')||vSep||
-        LPad(vSHP_HGT*10,5,'0')||vSep||
-        LPad(vSHP_HGT1*10,5,'0')||vSep||
-        LPad(vSHP_HGT2*10,5,'0')||vSep||
-        LPad(vSHP_RAD*10,5,'0')||vSep||
-        LPad(vSHP_RAD1*10,5,'0')||vSep||
-        LPad(vSHP_RAD2*10,5,'0')||vSep||
-        LPad(vSHP_RAD3*10,5,'0')||vSep||
-        LPad(vSHP_TRIM1*10,5,'0')||vSep||
-        LPad(vSHP_TRIM2*10,5,'0')||vSep||
-        LPad(vSHP_TRIM3*10,5,'0')||vSep||
-        LPad(vSHP_TRIM4*10,5,'0')||vSep||
-        LPad(vSHP_EDGE1*10,5,' ')||vSep||
-        LPad(vSHP_EDGE2*10,5,' ')||vSep||
-        LPad(vSHP_EDGE3*10,5,' ')||vSep||
-        LPad(vSHP_EDGE4*10,5,' ')||vSep||
-        LPad(vSHP_EDGE5*10,5,' ')||vSep||
-        LPad(vSHP_EDGE6*10,5,' ')||vSep||
-        LPad(vSHP_EDGE7*10,5,' ')||vSep||
-        LPad(vSHP_EDGE8*10,5,' ')||vSep||
-        RPad(vSHP_PATH,40)||vSep||
-        RPad(vSHP_FILE,40)||vSep||
-        RPad(vSHP_NAME,40)||vSep||
-        vSHP_MIRR||vSep||
-        vSHP_BASE;
-    end if;
-  end loop;
-  close c1;
+                vresult := '<SHP> '
+                           || vshp_pane
+                           || vsep
+                           || vshp_def
+                           || vsep
+                           || vshp_cat
+                           || vsep
+                           || lpad(vshp_num, 3, '0')
+                           || vsep
+                           || lpad(vshp_len * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_len1 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_len2 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_hgt * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_hgt1 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_hgt2 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_rad * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_rad1 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_rad2 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_rad3 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_trim1 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_trim2 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_trim3 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_trim4 * 10, 5, '0')
+                           || vsep
+                           || lpad(vshp_edge1 * 10, 5, ' ')
+                           || vsep
+                           || lpad(vshp_edge2 * 10, 5, ' ')
+                           || vsep
+                           || lpad(vshp_edge3 * 10, 5, ' ')
+                           || vsep
+                           || lpad(vshp_edge4 * 10, 5, ' ')
+                           || vsep
+                           || lpad(vshp_edge5 * 10, 5, ' ')
+                           || vsep
+                           || lpad(vshp_edge6 * 10, 5, ' ')
+                           || vsep
+                           || lpad(vshp_edge7 * 10, 5, ' ')
+                           || vsep
+                           || lpad(vshp_edge8 * 10, 5, ' ')
+                           || vsep
+                           || rpad(vshp_path, 40)
+                           || vsep
+                           || rpad(vshp_file, 40)
+                           || vsep
+                           || rpad(vshp_name, 40)
+                           || vsep
+                           || vshp_mirr
+                           || vsep
+                           || vshp_base;
 
-return vResult;
-end shp;
+            END IF;
 
-END PKG_LIPROD280;
+        END LOOP;
 
+        CLOSE c1;
+        RETURN vresult;
+    END shp;
+
+END pkg_liprod280;
 /

@@ -1,12 +1,39 @@
-  CREATE OR REPLACE PACKAGE "PKG_LIPROD280" AS 
-function BCD (pNrKompSzyby number) RETURN VARCHAR2;
-FUNCTION BEA (pNrKompZlec number, pNrPoz number, pNrElem number) RETURN VARCHAR2;
-FUNCTION BTH RETURN VARCHAR2;
-FUNCTION ELEM (pNrKompZlec number, pNrPoz number, pNrElem number) RETURN VARCHAR2;
-FUNCTION ORD (pNrKompZlec number) RETURN VARCHAR2;
-FUNCTION POS (pNrKompZlec number, pNrPoz number, pNrSzt number) RETURN VARCHAR2;
-FUNCTION REL RETURN VARCHAR2;
-FUNCTION SHP (pNrKompZlec number, pNrPoz number, pNrElem number) RETURN VARCHAR2;
-END PKG_LIPROD280;
+CREATE OR REPLACE PACKAGE "PKG_LIPROD280" AS
+    FUNCTION bcd (
+        pnrkompszyby NUMBER
+    ) RETURN VARCHAR2;
 
+    FUNCTION bea (
+        pnrkompzlec   NUMBER,
+        pnrpoz        NUMBER,
+        pnrelem       NUMBER
+    ) RETURN VARCHAR2;
+
+    FUNCTION bth RETURN VARCHAR2;
+
+    FUNCTION elem (
+        pnrkompzlec   NUMBER,
+        pnrpoz        NUMBER,
+        pnrelem       NUMBER
+    ) RETURN VARCHAR2;
+
+    FUNCTION ord (
+        pnrkompzlec NUMBER
+    ) RETURN VARCHAR2;
+
+    FUNCTION pos (
+        pnrkompzlec   NUMBER,
+        pnrpoz        NUMBER,
+        pnrszt        NUMBER
+    ) RETURN VARCHAR2;
+
+    FUNCTION rel RETURN VARCHAR2;
+
+    FUNCTION shp (
+        pnrkompzlec   NUMBER,
+        pnrpoz        NUMBER,
+        pnrelem       NUMBER
+    ) RETURN VARCHAR2;
+
+END pkg_liprod280;
 /
