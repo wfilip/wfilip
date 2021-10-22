@@ -50,7 +50,7 @@ CREATE OR REPLACE FORCE VIEW V_OBR_W_ZLEC AS
         O.symb_p_obr, O.nazwa_p_obr, O.met_oblicz, O.kolejn_obr, O.nr_komp_inst nk_inst_obr, O.wyd_h,
         decode(L.kolejn,max(L.kolejn) over (partition by L.nr_kom_zlec, L. nr_poz_zlec, L.nr_szt),1,0) zn_wyrobu,
         E.nr_kom_szyby, E.nr_stoj_sped, E.zn_wyk, case when E.nr_stoj_sped>0 or E.zn_wyk in (1,2) then 1 else 0 end wyk
- from tmp_lista_zlec TMP
+ from tmp_lista_poz TMP
  join zamow Z on Z.nr_kom_zlec=TMP.nk_zlec
  join spisz P on P.nr_kom_zlec=TMP.nk_zlec
  join struktury S on S.kod_str=P.kod_str 
