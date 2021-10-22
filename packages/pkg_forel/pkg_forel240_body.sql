@@ -4,17 +4,17 @@
 CREATE OR REPLACE PACKAGE BODY "PKG_FOREL240" AS
 
     FUNCTION ord (
-        vord_num     VARCHAR2,
-        vcust_num    VARCHAR2,
-        vcust_name   VARCHAR2,
-        vtext1       VARCHAR2,
-        vtext2       VARCHAR2,
-        vtext3       VARCHAR2,
-        vtext4       VARCHAR2,
-        vtext5       VARCHAR2,
-        vprod_date   VARCHAR2,
-        vdel_date    VARCHAR2,
-        vdel_area    VARCHAR2
+        vord_num    VARCHAR2,
+        vcust_num   VARCHAR2,
+        vcust_name  VARCHAR2,
+        vtext1      VARCHAR2,
+        vtext2      VARCHAR2,
+        vtext3      VARCHAR2,
+        vtext4      VARCHAR2,
+        vtext5      VARCHAR2,
+        vprod_date  VARCHAR2,
+        vdel_date   VARCHAR2,
+        vdel_area   VARCHAR2
     ) RETURN VARCHAR2 AS
     BEGIN
         RETURN 'ORD'
@@ -43,30 +43,30 @@ CREATE OR REPLACE PACKAGE BODY "PKG_FOREL240" AS
     END;
 
     FUNCTION pan (
-        pitem_num          NUMBER,
-        pid_num            VARCHAR2,
-        pbarcode           VARCHAR2,
-        ppan_qty           NUMBER,
-        pwidth             NUMBER,
-        pheight            NUMBER,
-        ppane1             NUMBER,
-        pspacer1           NUMBER,
-        ppane2             NUMBER,
-        pspacer2           NUMBER,
-        ppane3             NUMBER,
-        pspacer3           NUMBER,
-        ppane4             NUMBER,
-        pseal_inset        NUMBER,
-        pgas_spacer1       NUMBER,
-        pgas_spacer2       NUMBER,
-        pgas_spacer3       NUMBER,
-        pseal_code         NUMBER,
-        pspacer_type       NUMBER,
-        pspacer_height     NUMBER,
-        pshape             NUMBER,
-        pheavy_pane        NUMBER,
-        prack_info         VARCHAR2,
-        pig_pane_reverse   NUMBER
+        pitem_num         NUMBER,
+        pid_num           VARCHAR2,
+        pbarcode          VARCHAR2,
+        ppan_qty          NUMBER,
+        pwidth            NUMBER,
+        pheight           NUMBER,
+        ppane1            NUMBER,
+        pspacer1          NUMBER,
+        ppane2            NUMBER,
+        pspacer2          NUMBER,
+        ppane3            NUMBER,
+        pspacer3          NUMBER,
+        ppane4            NUMBER,
+        pseal_inset       NUMBER,
+        pgas_spacer1      NUMBER,
+        pgas_spacer2      NUMBER,
+        pgas_spacer3      NUMBER,
+        pseal_code        NUMBER,
+        pspacer_type      NUMBER,
+        pspacer_height    NUMBER,
+        pshape            NUMBER,
+        pheavy_pane       NUMBER,
+        prack_info        VARCHAR2,
+        pig_pane_reverse  NUMBER
     ) RETURN VARCHAR2 AS
     BEGIN
         RETURN 'PAN'
@@ -135,23 +135,23 @@ CREATE OR REPLACE PACKAGE BODY "PKG_FOREL240" AS
     END;
 
     FUNCTION shp (
-        pshp_path   VARCHAR2,
-        pshp_file   VARCHAR2,
-        pshp_name   VARCHAR2,
-        pshp_cat    NUMBER,
-        pshp_num    NUMBER,
-        pshp_l      NUMBER,
-        pshp_l1     NUMBER,
-        pshp_l2     NUMBER,
-        pshp_h      NUMBER,
-        pshp_h1     NUMBER,
-        pshp_h2     NUMBER,
-        pshp_r      NUMBER,
-        pshp_r1     NUMBER,
-        pshp_r2     NUMBER,
-        pshp_r3     NUMBER,
-        pshp_mirr   NUMBER,
-        pshp_base   NUMBER
+        pshp_path  VARCHAR2,
+        pshp_file  VARCHAR2,
+        pshp_name  VARCHAR2,
+        pshp_cat   NUMBER,
+        pshp_num   NUMBER,
+        pshp_l     NUMBER,
+        pshp_l1    NUMBER,
+        pshp_l2    NUMBER,
+        pshp_h     NUMBER,
+        pshp_h1    NUMBER,
+        pshp_h2    NUMBER,
+        pshp_r     NUMBER,
+        pshp_r1    NUMBER,
+        pshp_r2    NUMBER,
+        pshp_r3    NUMBER,
+        pshp_mirr  NUMBER,
+        pshp_base  NUMBER
     ) RETURN VARCHAR2 AS
         vresult VARCHAR2(1000);
     BEGIN
@@ -193,26 +193,26 @@ CREATE OR REPLACE PACKAGE BODY "PKG_FOREL240" AS
     END;
 
     FUNCTION cm (
-        ppaneno           NUMBER,
-        ppane_descript    VARCHAR2,
-        pid_num           VARCHAR2,
-        ppane_barcode     VARCHAR2,
-        ppane_type        NUMBER,
-        ppane_code        VARCHAR2,
-        ppane_thickness   NUMBER,
-        ppane_width       NUMBER,
-        ppane_height      NUMBER,
-        ppane_faceside    NUMBER,
-        ppane_rack_info   VARCHAR2,
-        psp_descript      VARCHAR2,
-        psp_type          NUMBER,
-        psp_code          VARCHAR2,
-        psp_width         NUMBER,
-        psp_height        NUMBER,
-        psp_inset         NUMBER,
-        psp_rack_info     VARCHAR2,
-        psp_gascode       NUMBER,
-        psp_seal_type     NUMBER
+        ppaneno          NUMBER,
+        ppane_descript   VARCHAR2,
+        pid_num          VARCHAR2,
+        ppane_barcode    VARCHAR2,
+        ppane_type       NUMBER,
+        ppane_code       VARCHAR2,
+        ppane_thickness  NUMBER,
+        ppane_width      NUMBER,
+        ppane_height     NUMBER,
+        ppane_faceside   NUMBER,
+        ppane_rack_info  VARCHAR2,
+        psp_descript     VARCHAR2,
+        psp_type         NUMBER,
+        psp_code         VARCHAR2,
+        psp_width        NUMBER,
+        psp_height       NUMBER,
+        psp_inset        NUMBER,
+        psp_rack_info    VARCHAR2,
+        psp_gascode      NUMBER,
+        psp_seal_type    NUMBER
     ) RETURN VARCHAR2 AS
     BEGIN
         RETURN 'CM'
@@ -285,21 +285,21 @@ CREATE OR REPLACE PACKAGE BODY "PKG_FOREL240" AS
     END;
 
     FUNCTION pro (
-        ppro_id            NUMBER,
-        ppane_face_side    NUMBER,
-        ppro_type          NUMBER,
-        pside1             NUMBER,
-        pside2             NUMBER,
-        pside3             NUMBER,
-        pside4             NUMBER,
-        pside5             NUMBER,
-        pside6             NUMBER,
-        pside7             NUMBER,
-        pside8             NUMBER,
-        pside9             NUMBER,
-        pside10            NUMBER,
-        ppro_description   VARCHAR2,
-        ppro_text          VARCHAR2
+        ppro_id           NUMBER,
+        ppane_face_side   NUMBER,
+        ppro_type         NUMBER,
+        pside1            NUMBER,
+        pside2            NUMBER,
+        pside3            NUMBER,
+        pside4            NUMBER,
+        pside5            NUMBER,
+        pside6            NUMBER,
+        pside7            NUMBER,
+        pside8            NUMBER,
+        pside9            NUMBER,
+        pside10           NUMBER,
+        ppro_description  VARCHAR2,
+        ppro_text         VARCHAR2
     ) RETURN VARCHAR2 AS
     BEGIN
         RETURN 'PRO'
@@ -337,10 +337,10 @@ CREATE OR REPLACE PACKAGE BODY "PKG_FOREL240" AS
     END;
 
     FUNCTION generate_pro (
-        pdeviceid     NUMBER,
-        pnrkompzlec   NUMBER,
-        pnrpoz        NUMBER,
-        pnrelem       NUMBER
+        pdeviceid    NUMBER,
+        pnrkompzlec  NUMBER,
+        pnrpoz       NUMBER,
+        pnrelem      NUMBER
     ) RETURN VARCHAR2 AS
 
         CURSOR c1 IS
@@ -349,29 +349,30 @@ CREATE OR REPLACE PACKAGE BODY "PKG_FOREL240" AS
         FROM
             v_zlec_mon vzm
         WHERE
-            vzm.nr_kom_zlec = pnrkompzlec
+                vzm.nr_kom_zlec = pnrkompzlec
             AND vzm.nr_poz = pnrpoz
             AND vzm.nr_el = pnrelem;
 
-        vzm         v_zlec_mon%rowtype;
-        vresult     VARCHAR2(1000);
-        vside1      NUMBER(5);
-        vside2      NUMBER(5);
-        vside3      NUMBER(5);
-        vside4      NUMBER(5);
-        vside5      NUMBER(5);
-        vside6      NUMBER(5);
-        vside7      NUMBER(5);
-        vside8      NUMBER(5);
-        vside9      NUMBER(5);
-        vside10     NUMBER(5);
-        max_stepl   NUMBER(5);
-        max_stepg   NUMBER(5);
-        max_stepp   NUMBER(5);
-        max_stepd   NUMBER(5);
-        vsep2       varchar2(2);
+        vzm        v_zlec_mon%rowtype;
+        vresult    VARCHAR2(1000);
+        vside1     NUMBER(5);
+        vside2     NUMBER(5);
+        vside3     NUMBER(5);
+        vside4     NUMBER(5);
+        vside5     NUMBER(5);
+        vside6     NUMBER(5);
+        vside7     NUMBER(5);
+        vside8     NUMBER(5);
+        vside9     NUMBER(5);
+        vside10    NUMBER(5);
+        max_stepl  NUMBER(5);
+        max_stepg  NUMBER(5);
+        max_stepp  NUMBER(5);
+        max_stepd  NUMBER(5);
+        vsep2      VARCHAR2(2);
     BEGIN
-        vsep2 := chr(13)|| chr(10);        
+        vsep2 := chr(13)
+                 || chr(10);
         vresult := '';
         OPEN c1;
         FETCH c1 INTO vzm;
@@ -390,7 +391,7 @@ CREATE OR REPLACE PACKAGE BODY "PKG_FOREL240" AS
         FROM
             v_zlec_mon vzm
         WHERE
-            vzm.nr_kom_zlec = pnrkompzlec
+                vzm.nr_kom_zlec = pnrkompzlec
             AND vzm.nr_poz = pnrpoz
             AND vzm.nr_el IN (
                 pnrelem - 1,
@@ -412,8 +413,8 @@ CREATE OR REPLACE PACKAGE BODY "PKG_FOREL240" AS
 
 -- SPECIAL inset
 -- roznica wartosci stepu na ramce i max stepu na sasiadujacych warstwach to jest poglebienie uszczelnienia
-        IF ( vzm.stepl - max_stepl > 0 ) OR ( vzm.stepp - max_stepp > 0 ) OR ( vzm.stepd - max_stepd > 0 ) OR ( vzm.stepg - max_stepg
-        > 0 ) THEN
+        IF ( vzm.stepl - max_stepl > 0 ) OR ( vzm.stepp - max_stepp > 0 ) OR ( vzm.stepd - max_stepd > 0 ) OR ( vzm.stepg - max_stepg >
+        0 ) THEN
             vside1 := vzm.stepd - max_stepd + vzm.uszcz_std;
             vside2 := vzm.stepp - max_stepp + vzm.uszcz_std;
             vside3 := vzm.stepg - max_stepg + vzm.uszcz_std;
