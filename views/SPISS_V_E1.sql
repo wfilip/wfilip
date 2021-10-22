@@ -27,7 +27,7 @@ AS
                                  and nr_porz_obr=/*nr_porz*/(case when S.czy_war=1 and D.strona=0 then S.lp else nvl(S.etap*100+D.kol_dod,S.lp) end)) inst_ustal,
                --decode(nvl(D.nr_kat,0),0,K0.nr_kat,D.nr_kat) nr_kat, 28/03
                --nvl(D0.nr_kat,S.nr_kat) nr_kat, --zakomentowane 28/01/2019 przed wdrozeniem do Eff ze wzgledu na bleny w V_SPISS_ERR
-               nvl(nullif(S.nr_kat,0),D0.nr_kat) nr_kat, 
+               nvl(nullif(S.nr_kat,0),D0.nr_kat) nr_kat,
                case when KRA.nr_kat is not null or O1.nr_k_p_obr is not null then D.kod_dod else ' ' end kod_dod, S.zn_pp, 
                nvl(KRA.typ_kat,S.typ_kat) typ_kat,
                nvl2(KRA.nr_kat,D.kod_dod,decode(S.rodz_sur,'CZY',K0.typ_kat,S.typ_kat)) indeks,
@@ -61,6 +61,7 @@ left join parinst I on I.ty_inst=S.typ_inst and I.nr_inst=S.nr_inst
 left join parinst I2 on I2.nr_komp_inst=O.nr_komp_inst
 --instalacja ze Slownika Obróbek
 where 1=1 --and S.nr_komp_zr=:NK_ZLEC --and nr_kol=:POZ
+  and (nvl(O.obr_lacz,0)=0 or O.obr_lacz=8 and (select typ_pozycji from struktury STR where STR.nr_kom_str=S.nr_kom_str) in ('cie','str')) 
   and not (S.rodz_sur='FOL' or S.rodz_sur='CZY' and S.znacz_pr='9.La' or nvl(O1.obr_lacz,0)>0)
   --and not (S.rodz_sur='CZY' and S.nr_kat=(select nvl(max(O.nr_kat_obr),-1) from spisd D, slparob O where D.nr_kom_zlec=S.nr_kom_zlec and D.nr_poz=S.nr_poz and D.do_war=S.nr_war and O.nr_k_p_obr=D.nr_komp_obr));
  and not (S.rodz_sur='CZY' and exists (select 1 from spisd D, slparob O where D.nr_kom_zlec=S.nr_kom_zlec and D.nr_poz=S.nr_poz and D.do_war=S.nr_war and D.nr_komp_obr>0 and O.nr_k_p_obr=D.nr_komp_obr and (D.nr_komp_obr=S.nk_obr or O.nr_kat_obr=S.nr_kat))); 

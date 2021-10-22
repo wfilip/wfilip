@@ -16,6 +16,3 @@ where
 and
    a.object_id = c.object_id;
 
-
---select * from log_zm order by data desc, czas desc;
---select * from errors order by data desc, czas desc;

@@ -1,4 +1,7 @@
-create or replace PACKAGE PKG_REJESTRACJA IS 
+--drop package pkg_rejestracja;
+--create synonym PKG_REJESTRACJA FOR PKG_REJESTRACJA1;
+
+create or replace PACKAGE PKG_REJESTRACJA1 IS 
 /*deklaracje*/
 /*nowy typ kursora, do podstawiana ró¿nych kewrend - test NIEUZYWANE*/
 TYPE ref_kursor IS REF CURSOR;
@@ -18,8 +21,8 @@ CURSOR kursor_lwyc (pNR_KOM_ZLEC NUMBER, pNR_POZ_ZLEC NUMBER, pNR_SZT NUMBER, pN
       AND (case when pZAKRES_INST=3 and l_wyc.zn_wyrobu=1 OR pZAKRES_INST in (4,5,6) and l_wyc.kolejn<pMAX_KOLEJN OR pZAKRES_INST=1 and l_wyc.nr_inst=pNR_INST OR pZAKRES_INST=2 then 1 else 0 end)=1
       AND (case when pZAPIS=0 and l_wyc.op=pOPER OR pNADPISZ=1 or l_wyc.d_wyk<to_date('2001/01/01','YYYY/MM/DD') then 1 else 0 end)=1
       AND (pZAPIS=1 or l_wyc.nr_stoj=0)
-      AND zn_braku in (0,8)
-      AND parinst.fl_cutmon=2
+      AND (zn_braku in (0,7) OR zn_braku=8 and wyroznik<>'B')
+      AND (parinst.fl_cutmon=2 OR (select nr_wdr from firma)=11) --VTM
  FOR UPDATE;
  
 CURSOR kursor_lwycMON (pNR_KOM_ZLEC NUMBER, pNR_POZ_ZLEC NUMBER, pNR_SZT NUMBER)
@@ -55,12 +58,12 @@ PROCEDURE Uzupelnij_l_wyc(
 );
 
 PROCEDURE REJ_ZMIANE_WG_TAFLI (pINST NUMBER, pNK_ZM_WYK NUMBER, pZN_WYK NUMBER);
-PROCEDURE REJ_WG_TAFLI (pNR_OPT NUMBER, pNR_TAF NUMBER, pZN_WYK NUMBER, pDATA DATE, pZM NUMBER, pINST NUMBER);
+PROCEDURE REJ_WG_TAFLI (pNR_OPT NUMBER, pNR_TAF NUMBER, pZN_WYK NUMBER, pDATA DATE, pZM NUMBER, pINST NUMBER, pOPER VARCHAR2 default null);
 
-END PKG_REJESTRACJA;
+END PKG_REJESTRACJA1;
 /
 
-create or replace PACKAGE BODY PKG_REJESTRACJA AS
+create or replace PACKAGE BODY PKG_REJESTRACJA1 AS
 
 FUNCTION OPERATOR_SESJI RETURN VARCHAR2 AS
 begin
@@ -156,14 +159,26 @@ PROCEDURE Uzupelnij_l_wyc(
      WHERE nr_komp_zlec=p.nr_kom_zlec_wew and nr_poz=p.nr_poz_zlec_wew and nr_szt=pNR_SZT and zn_wyk<2;
     END IF;
    END LOOP;
- END IF;    
+ END IF;
+  --uzup. zlec. braków 
+ IF pUWZGL_BRAKI=1 THEN
+  FOR b IN (select B.zlec_braki, P.nr_poz nr_poz_br
+            from braki_b B
+            left join spisz P ON P.id_poz =B.id_poz_br
+            where B.nr_kom_szyby=pNR_KOM_SZYBY)
+   LOOP
+    IF b.nr_poz_br is not null AND b.zlec_braki>0 THEN
+     Uzupelnij_l_wyc(0, b.zlec_braki, b.nr_poz_br, 1, 0, pNR_INST, pZAKRES_INST, pNADPISZ, 0, pDATA_WYK, pZM_WYK, pNR_STOJ, pPOZ_STOJ, pZAPIS, pMAX_KOLEJN, pOPER);
+    END IF;
+   END LOOP;
+ END IF;  
  END Uzupelnij_l_wyc;
   
  
  PROCEDURE REJ_ZMIANE_WG_TAFLI (pINST NUMBER, pNK_ZM_WYK NUMBER, pZN_WYK NUMBER)
  AS
   cursor c1 IS 
-   SELECT nr_opt, nr_tafli, d_wyk, zm_wyk, nr_komp_instal
+   SELECT nr_opt, nr_tafli, d_wyk, zm_wyk, nr_komp_instal, nr_oper
    FROM opt_taf
    WHERE nr_komp_instal=pINST and nr_komp_zmw=pNK_ZM_WYK; --d_wyk=pDATA and zm_wyk=pZM;
   rec1 c1%ROWTYPE;
@@ -175,14 +190,14 @@ PROCEDURE Uzupelnij_l_wyc(
   LOOP
    FETCH c1 INTO rec1;
    EXIT WHEN c1%NOTFOUND;
-   REJ_WG_TAFLI(rec1.nr_opt, rec1.nr_tafli, pZN_WYK, rec1.d_wyk, rec1.zm_wyk, rec1.nr_komp_instal); 
+   REJ_WG_TAFLI(rec1.nr_opt, rec1.nr_tafli, pZN_WYK, rec1.d_wyk, rec1.zm_wyk, rec1.nr_komp_instal, rec1.nr_oper); 
   END LOOP;
   CLOSE c1;
  EXCEPTION WHEN OTHERS THEN
   IF c1%ISOPEN THEN CLOSE c1; END IF;
  END REJ_ZMIANE_WG_TAFLI;
  
- PROCEDURE REJ_WG_TAFLI (pNR_OPT NUMBER, pNR_TAF NUMBER, pZN_WYK NUMBER, pDATA DATE, pZM NUMBER, pINST NUMBER)
+ PROCEDURE REJ_WG_TAFLI (pNR_OPT NUMBER, pNR_TAF NUMBER, pZN_WYK NUMBER, pDATA DATE, pZM NUMBER, pINST NUMBER, pOPER VARCHAR2 default null)
  AS
   cursor cK IS 
    SELECT nr_komp_zlec, nr_poz, nr_sztuki, nr_warstwy
@@ -192,7 +207,12 @@ PROCEDURE Uzupelnij_l_wyc(
   vOper VARCHAR2(30);
   vZnWyrobu NUMBER(1);
  BEGIN
-  vOper:=OPERATOR_SESJI();
+  IF pOPER is null THEN
+   vOper:=OPERATOR_SESJI();
+  ELSE 
+   vOper:=pOPER;
+  END IF;
+  
   OPEN cK;
   LOOP
    FETCH cK INTO recK;
@@ -201,7 +221,9 @@ PROCEDURE Uzupelnij_l_wyc(
    UPDATE l_wyc
    SET d_wyk=pDATA, zm_wyk=pZM, nr_inst_wyk=pINST, op=vOper
    WHERE nr_kom_zlec=recK.nr_komp_zlec AND nr_poz_zlec=recK.nr_poz AND nr_szt=recK.nr_sztuki AND nr_warst=recK.nr_warstwy
-     AND typ_inst='A C' --and d_wyk<to_date('2001','YYYY')
+     --AND typ_inst='A C' --and d_wyk<to_date('2001','YYYY')
+     AND NOT (pINST>0 AND d_wyk>to_date('2001','YYYY'))
+     AND (select ty_inst from parinst where nr_komp_inst=l_wyc.nr_inst)='A C'
    RETURNING max(zn_wyrobu) INTO vZnWyrobu;
    IF pZN_WYK>=0 AND vZnWyrobu=1 THEN
     UPDATE spise
@@ -215,4 +237,4 @@ PROCEDURE Uzupelnij_l_wyc(
   IF ck%ISOPEN THEN CLOSE cK; END IF;
  END REJ_WG_TAFLI;
  
-END PKG_REJESTRACJA;
+END PKG_REJESTRACJA1;

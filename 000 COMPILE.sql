@@ -1,3 +1,5 @@
+SELECT OBJECT_NAME, OBJECT_TYPE FROM user_objects WHERE status = 'INVALID' ORDER BY 2;
+
 --kompilacja niepoprawnych obiektów
 declare
  n char(1);

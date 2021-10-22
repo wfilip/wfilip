@@ -1,3 +1,4 @@
+--widok rozbijajacy struktury ze SPISZ do surowcow z wyj. Polproduktow
 CREATE OR REPLACE VIEW "V_STR_SKL_Z" ("NR_KOM_ZLEC", "NR_ZLEC", "NR_KON", "DATA_ZL", "WYROZNIK", "STATUS", "R_DAN", "NR_KONTRAKTU", "NR_POZ", "ILOSC", "SZER", "WYS", "TYP_POZ", "POW", "OBW", "GR_SIL", "NR_KOMP_RYS", "NR_KOM_STR", "CZY_WAR", "NR_WAR", "NR_SKL", "NR_SKL1", "NR_SKL2", "NR_SKL3", "NR_SKL4", "ZN_WAR", "NR_KOM_SKL", "TYP_KAT", "RODZ_SUR", "KOD_POLP", "KOD_STR", "NR_KOM_STR1", "NR_KOM_STR2", "NR_KOM_STR3", "NR_KOM_STR4", "POZIOM", "ZN_PP", "IDENT_BUD") AS 
   select Z.nr_kom_zlec, Z.nr_zlec, Z.nr_kon, Z.data_zl, Z.wyroznik, Z.status, Z.r_dan, Z.nr_kontraktu,
        P.nr_poz, P.ilosc, P.szer, P.wys, P.typ_poz, P.pow, P.obw, P.gr_sil, P.nr_komp_rys,

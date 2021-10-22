@@ -8,6 +8,9 @@ create or replace package PKG_CZAS AS
   FUNCTION CZAS_TO_ZM2 (pNR_KOMP_INST IN NUMBER, pDATA IN DATE, pPRZED_PO IN NUMBER DEFAULT 0, pRAISE_EX IN NUMBER DEFAULT 1) RETURN NUMBER;
   PROCEDURE POBIERZ_GODZ_PRACY(pNR_KOMP_INST IN NUMBER, pDayOfWeek IN NUMBER, pPocz OUT DATE, pKon OUT DATE, pDlugZm OUT NUMBER);
   PROCEDURE NUMER_TYGODNIA (pDATA IN DATE, pNR_TYG IN OUT NUMBER, pROK IN OUT NUMBER, pDATA_PON OUT DATE);
+  --03.2021
+  FUNCTION GODZ_POCZ_ZM(pNR_KOMP_INST NUMBER, pNR_ZM NUMBER) RETURN DATE;
+  FUNCTION GODZ_KONC_ZM(pNR_KOMP_INST NUMBER, pNR_ZM NUMBER, pUWZGL_CZAS_POPROC NUMBER default 0) RETURN DATE;
   
 END PKG_CZAS;
 /
@@ -244,6 +247,43 @@ BEGIN
  END IF;
  
 END NUMER_TYGODNIA;
+
+FUNCTION GODZ_POCZ_ZM(pNR_KOMP_INST NUMBER, pNR_ZM NUMBER) RETURN DATE
+AS
+ GPocz DATE;
+ WeekDay NUMBER(1);
+ Dzien DATE;
+ Zm NUMBER(1);
+BEGIN
+ WeekDay:=to_char(NR_ZM_TO_DATE(pNR_ZM),'D');
+ Dzien:=NR_ZM_TO_DATE(pNR_ZM);
+ Zm:=NR_ZM_TO_ZM(pNR_ZM);
+ SELECT to_date(to_char(Dzien,'DDMMYYYY')||' '||decode(WeekDay,1,pon_pocz,2,wt_pocz,3,sr_pocz,4,czw_pocz,5,pi_pocz,6,sob_pocz,7,nie_pocz,'060000'),'DDMMYYYY HH24MISS')
+        +(Zm-1)*dlugosc_zmiany/24
+   INTO GPocz
+ FROM parinst
+ WHERE nr_komp_inst=pNR_KOMP_INST;
+ RETURN GPocz; --zwracana wartoœæ DATE = 1.dzieñ bie¿acego miesiaca + godzina wg PARINST
+END GODZ_POCZ_ZM;
+
+FUNCTION GODZ_KONC_ZM(pNR_KOMP_INST NUMBER, pNR_ZM NUMBER, pUWZGL_CZAS_POPROC NUMBER) RETURN DATE
+AS
+ GPocz DATE;
+ WeekDay NUMBER(1);
+ Dzien DATE;
+ Zm NUMBER(1);
+BEGIN
+ WeekDay:=to_char(NR_ZM_TO_DATE(pNR_ZM),'D');
+ Dzien:=NR_ZM_TO_DATE(pNR_ZM);
+ Zm:=NR_ZM_TO_ZM(pNR_ZM);
+ SELECT to_date(to_char(Dzien,'DDMMYYYY')||' '||decode(WeekDay,1,pon_pocz,2,wt_pocz,3,sr_pocz,4,czw_pocz,5,pi_pocz,6,sob_pocz,7,nie_pocz,'060000'),'DDMMYYYY HH24MISS')
+        +Zm*dlugosc_zmiany/24
+        +sign(pUWZGL_CZAS_POPROC)*czas_poprocesowy/24
+   INTO GPocz
+ FROM parinst
+ WHERE nr_komp_inst=pNR_KOMP_INST;
+ RETURN GPocz; --zwracana wartoœæ DATE = 1.dzieñ bie¿acego miesiaca + godzina wg PARINST
+END GODZ_KONC_ZM;
 
 END PKG_CZAS;
 /

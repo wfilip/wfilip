@@ -1,7 +1,13 @@
-DROP TABLE "TMP_ZMIANY";
-CREATE GLOBAL TEMPORARY TABLE "TMP_ZMIANY" 
-(	"NR_KOMP_INST" NUMBER(10,0) NOT NULL ENABLE, 
-	"NR_KOMP_ZM" NUMBER(10,0) NOT NULL ENABLE, 
+--DROP TABLE "TMP_ZMIANY";
+CREATE GLOBAL TEMPORARY TABLE "TMP_ZMIANY2" 
+(	"NR_KOMP_INST" NUMBER(10,0) NOT NULL, 
+	"NR_KOMP_ZM" NUMBER(10,0) NOT NULL,
+    "DL_ZMIANY" NUMBER(4,2) NOT NULL,
+    "ZATWIERDZ" NUMBER(1) NOT NULL,
+	"SZT" NUMBER(8), 
+	"SZT_ZL0" NUMBER(8),
+	"SZT_ZL1" NUMBER(8),
+	"SZT_ZL_MAX" NUMBER(8),
 	"WIELK" NUMBER(8,2), 
 	"WIELK_ZL0" NUMBER(8,2),
 	"WIELK_ZL1" NUMBER(8,2),
@@ -9,9 +15,10 @@ CREATE GLOBAL TEMPORARY TABLE "TMP_ZMIANY"
 	"WYD_NOM" NUMBER(8), 
 	"WYD_MAX" NUMBER(8)
 ) ON COMMIT PRESERVE ROWS ;
-CREATE UNIQUE INDEX TMP_ZMIANY_IDX ON TMP_ZMIANY (nr_komp_inst, nr_komp_zm);
+CREATE UNIQUE INDEX TMP_ZMIANY2_IDX ON TMP_ZMIANY2 (nr_komp_inst, nr_komp_zm);
 
 create or replace PACKAGE PKG_PLAN_SPISS AS
+ vWDR NUMBER(3) := 0;
  --PARAMETRY planowania automatycznego
  --zmiana do zaplanowania operacji, dla których nie znaleziono wolnej zmiany
  gZM_BUFOR NUMBER:=PKG_CZAS.NR_KOMP_ZM(sysdate,4);
@@ -41,6 +48,8 @@ create or replace PACKAGE PKG_PLAN_SPISS AS
      AND ELEMENT_LISTY(gLISTA_OBR,L.nr_obr)=1
      AND L.nr_inst_plan>0;
  
+ TYPE ASSOC_TMP_TAB IS TABLE OF NUMBER INDEX BY PLS_INTEGER;  -- Associative array type
+ 
  FUNCTION CZAS_POPROC(pINST1 NUMBER, pINST2 NUMBER) RETURN NUMBER;
  --FUNKCJA SPRAWDZA CZY MOZNA PRZEPLANWOAC z INST_Z na INST_NA sztuki obecnie zaplanowane na pINST i zmianê pZM
  FUNCTION CZY_MOZNA_PRZENIESC (pNK_ZLEC NUMBER, pPOZ NUMBER DEFAULT 0, pINST NUMBER, pZM NUMBER, pINST_Z NUMBER, pINST_NA NUMBER) RETURN NUMBER;  
@@ -64,6 +73,7 @@ create or replace PACKAGE PKG_PLAN_SPISS AS
  --PROCEDURE POPRAW_JEDNOCZ_LWYC2 (pNK_ZLEC NUMBER, pPOZ NUMBER DEFAULT 0, pZAKR NUMBER DEFAULT 0, pNR_OBR NUMBER DEFAULT 0, pINST NUMBER DEFAULT 0, pDANE2 VARCHAR2 DEFAULT null);
  PROCEDURE POPRAW_OBR_JEDNOCZ (pNK_ZLEC NUMBER, pPOZ NUMBER DEFAULT 0, pNR_OBR NUMBER default 0, pODWROTNIE NUMBER default 0);
  --
+ PROCEDURE WYPELNIJ_ZMIANY(pNK_ZLEC NUMBER, pZM_OD NUMBER, pZM_DO NUMBER, pALL_INST NUMBER DEFAULT 0);
  PROCEDURE PLANUJ_SZYBY (pNK_ZLEC NUMBER, pNR_ZM_POCZ NUMBER default 0, pNR_ZM_KONC NUMBER default 0);
  --
  FUNCTION NR_INST_NAST(pNK_ZLEC NUMBER, pPOZ NUMBER, pWAR NUMBER, pSZT NUMBER, pKOLEJN NUMBER) RETURN NUMBER;
@@ -91,7 +101,10 @@ create or replace PACKAGE BODY PKG_PLAN_SPISS AS
  PROCEDURE ZAPISZ_ZM_ZLEC;
  --stale
  cNR_OBR_MON CONSTANT NUMBER(3) := 99;
-
+ -- Associative array type
+ tabOBRi ASSOC_TMP_TAB;  --wybrane instalacje dla obrobki
+ tabOBRz ASSOC_TMP_TAB;  --wybrane zmiany dla obrobki
+ 
  --definicje
  PROCEDURE LWYC2_DO_BUFORA (pNK_ZLEC NUMBER, pPOZ NUMBER DEFAULT 0, pZAKR NUMBER DEFAULT 0, pNR_OBR NUMBER DEFAULT 0, pINST NUMBER DEFAULT 0, pDANE2 VARCHAR2 DEFAULT null)
   AS
@@ -354,6 +367,9 @@ create or replace PACKAGE BODY PKG_PLAN_SPISS AS
 PROCEDURE LWYC2_INST_POW(pNK_ZLEC NUMBER, pPOZ NUMBER DEFAULT 0, pLISTA_OBR VARCHAR2)
 AS
  BEGIN
+  IF vWDR=0 THEN SELECT nr_wdr INTO vWDR FROM firma; END IF;
+ 
+ 
   IF trim(pLISTA_OBR) is not null THEN 
    gLISTA_OBR:=pLISTA_OBR;
   ELSE 
@@ -388,7 +404,7 @@ AS
          and L.nr_porz_obr=L2.nr_porz_obr-1500 and I.nr_inst_pow>0 and G.nr_komp_gr is not null);
          
   INSERT INTO l_wyc2 (nr_kom_zlec, nr_poz_zlec, nr_szt, nr_warst, war_do, nr_obr, nr_porz_obr, nr_inst_plan, nr_zm_plan, nr_inst_wyk, nr_zm_wyk, kolejn, flag)
-    SELECT nr_kom_zlec, nr_poz_zlec, nr_szt, nr_warst, war_do, nr_obr, nr_porz_obr+1500, I.nr_inst_pow, nr_zm_plan, 0, 0, L.kolejn+1, -1
+    SELECT nr_kom_zlec, nr_poz_zlec, nr_szt, nr_warst, war_do, nr_obr, nr_porz_obr+1500, I.nr_inst_pow, nr_zm_plan, 0, 0, decode(vWDR,11,floor(L.kolejn*0.01)*100+I.kolejn,L.kolejn+1), -1
     FROM l_wyc2 L
     LEFT JOIN parinst I ON I.nr_komp_inst=L.nr_inst_plan
     LEFT JOIN gr_inst_dla_obr G ON G.nr_komp_obr=L.nr_obr and G.nr_komp_inst=I.nr_inst_pow
@@ -438,7 +454,7 @@ AS
   
 END POPRAW_OBR_JEDNOCZ;
 
-PROCEDURE WPISZ_INST_WG_CIAGU (pNK_ZLEC NUMBER, pPOZ NUMBER DEFAULT 0, pLISTA_OBR VARCHAR2)
+PROCEDURE WPISZ_INST_WG_CIAGU_EFF (pNK_ZLEC NUMBER, pPOZ NUMBER DEFAULT 0, pLISTA_OBR VARCHAR2)
 AS
  inst_alter NUMBER(10);
  CURSOR c1 (pPOZ NUMBER, pNR_PORZ NUMBER, pINST_ALTERNAT NUMBER)
@@ -481,7 +497,44 @@ AS
       CLOSE c1;
      END IF;
    END LOOP;
-END WPISZ_INST_WG_CIAGU;  
+END WPISZ_INST_WG_CIAGU_EFF;
+
+PROCEDURE WPISZ_INST_WG_CIAGU (pNK_ZLEC NUMBER, pPOZ NUMBER DEFAULT 0, pLISTA_OBR VARCHAR2)
+AS
+ BEGIN
+  IF vWDR=0 THEN SELECT nr_wdr INTO vWDR FROM firma; END IF;
+  IF vWDR=22 THEN
+   WPISZ_INST_WG_CIAGU_EFF (pNK_ZLEC, pPOZ, pLISTA_OBR);
+   RETURN;
+  END IF;   
+  
+  --po nowemu, GP
+  IF trim(pLISTA_OBR) is not null THEN 
+    gLISTA_OBR:=pLISTA_OBR;
+  ELSE 
+    gLISTA_OBR:=LISTA_OBROBEK(pNK_ZLEC,pPOZ,0,0,0,0);
+  END IF;
+
+   FOR v IN (select v.nr_kom_zlec, v.nr_poz, v.nr_porz, v.nk_inst, v.nr_inst_pow,
+                    dense_rank() OVER (PARTITION BY V.nr_kom_zlec, V.nr_poz, V.nr_porz ORDER BY G.nr_komp_gr, G.kolej, V.kolejnosc_z_grupy) Rank_grup,
+                    dense_rank() OVER (PARTITION BY V.nr_kom_zlec, V.nr_poz, V.nk_obr, V.war_od ORDER BY V.nr_porz) Rank_obr,
+                    G0.nr_komp_gr, G.nr_komp_inst, G.kolej
+             from v_spiss V
+             inner join gr_inst_pow G on V.nk_inst=G.nr_komp_inst
+             inner join gr_inst_pow G0 on G0.nr_komp_gr=G.nr_komp_gr and G0.nr_komp_inst>0 and not G0.nr_komp_inst=G.nr_komp_inst and G0.flag=1 --inst. wiodaca
+             where V.nr_kom_zlec=pNK_ZLEC and V.kryt_suma=0
+               and exists (select 1 from l_wyc2 L2
+                           where L2.nr_kom_zlec=V.nr_kom_zlec and L2.nr_poz_zlec=V.nr_poz and L2.nr_szt=1
+                             and L2.nr_inst_plan=G0.nr_komp_inst
+                             and (L2.nr_warst between V.war_od and V.war_do or V.war_od between L2.nr_warst and L2.war_do) --potrzebny alternatywny zakres warstw dla inst. wcz i pozn.
+                           )
+            )
+    LOOP   
+     IF V.rank_grup=1 and V.rank_obr=1 THEN
+       USTAW_INST (v.nr_kom_zlec, v.nr_poz, v.nr_porz, 0, v.nk_inst, v.nr_inst_pow, null);--pNK_ZLEC NUMBER, pNR_POZ NUMBER, pNR_PORZ NUMBER, pNK_OBR NUMBER, pNK_INST NUMBER, pNK_INST_POW NUMBER DEFAULT null, pNK_ZM NUMBER DEFAULT null)
+     END IF;
+    END LOOP;
+END WPISZ_INST_WG_CIAGU;
 
  FUNCTION CZY_MOZNA_PRZENIESC (pNK_ZLEC NUMBER, pPOZ NUMBER DEFAULT 0, pINST NUMBER, pZM NUMBER, pINST_Z NUMBER, pINST_NA NUMBER) RETURN NUMBER
   AS
@@ -739,11 +792,11 @@ FUNCTION LISTA_PRZEKROCZEN1(pLISTA_ZLEC VARCHAR2, pSQL_WHERE VARCHAR2) RETURN VA
     EXIT WHEN cInst%NOTFOUND;
     ZAPISZ_LOG('USUN_PLAN_WG_BACKUPU',pNK_ZLEC,'D',-recInst.nr_inst_plan);
     IF recInst.typ_inst='A C' THEN
-      DELETE FROM wykzal WHERE nr_komp_zlec=pNK_ZLEC  and pPOZ in (0,nr_poz) and nr_komp_instal=recInst.nr_inst_plan;
+      DELETE FROM wykzal WHERE nr_komp_zlec=pNK_ZLEC  and pPOZ in (0,nr_poz) and nr_komp_instal=recInst.nr_inst_plan and nr_zm_plan>0;
     ELSIF recInst.typ_inst in ('MON','STR') THEN
       DELETE FROM spisp WHERE numer_komputerowy_zlecenia=pNK_ZLEC  and pPOZ in (0,nr_poz) and nr_kom_inst=recInst.nr_inst_plan;
     ELSE --pozostale inst
-      DELETE FROM wykzal WHERE nr_komp_zlec=pNK_ZLEC  and pPOZ in (0,nr_poz) and nr_komp_instal=recInst.nr_inst_plan;
+      DELETE FROM wykzal WHERE nr_komp_zlec=pNK_ZLEC  and pPOZ in (0,nr_poz) and nr_komp_instal=recInst.nr_inst_plan and nr_zm_plan>0;
     END IF;
     DELETE FROM harmon WHERE nr_komp_zlec=pNK_ZLEC and typ_harm='P' and nr_komp_inst=recInst.nr_inst_plan;
     --DELETE FROM l_wyc WHERE nr_kom_zlec=pNK_ZLEC  and pPOZ in (0,nr_poz_zlec) and nr_inst=recInst.nr_inst_plan;    
@@ -1196,11 +1249,17 @@ FUNCTION LISTA_PRZEKROCZEN1(pLISTA_ZLEC VARCHAR2, pSQL_WHERE VARCHAR2) RETURN VA
     RETURN vGodz;
    END CZAS_POPROC;
 
-  PROCEDURE WYPELNIJ_ZMIANY(pNK_ZLEC NUMBER, pZM_OD NUMBER, pZM_DO NUMBER) AS
+  PROCEDURE WYPELNIJ_ZMIANY(pNK_ZLEC NUMBER, pZM_OD NUMBER, pZM_DO NUMBER, pALL_INST NUMBER DEFAULT 0) AS
    BEGIN
-    DELETE tmp_zmiany;
-    INSERT INTO tmp_zmiany
-     select nr_komp_inst, nr_komp_zm, nvl(sum(H.wielkosc),0) wielk, nvl(sum(decode(H.nr_komp_zlec,pNK_ZLEC,H.wielkosc,0)),0) wielk_ZL0, 0 wielk_ZL1,
+    DELETE tmp_zmiany2;
+    INSERT INTO tmp_zmiany2 (nr_komp_inst, nr_komp_zm, dl_zmiany, zatwierdz,
+                            szt, szt_zl0, szt_zl1, szt_zl_max,
+                            wielk, wielk_zl0, wielk_zl1, wielk_zl_max,
+                            wyd_nom, wyd_max)
+     select nr_komp_inst, nr_komp_zm, max(dl_zmiany), max(Z.zatwierdz),
+            nvl(sum(H.ilosc),0) szt, nvl(sum(decode(H.nr_komp_zlec,pNK_ZLEC,H.ilosc,0)),0) szt_zl0, 0 szt_zl1,
+            (select count(1) from v_wyc2 where nr_kom_zlec=pNK_ZLEC and nr_inst_plan=nr_komp_inst) szt_zl_max,
+            nvl(sum(H.wielkosc),0) wielk, nvl(sum(decode(H.nr_komp_zlec,pNK_ZLEC,H.wielkosc,0)),0) wielk_ZL0, 0 wielk_ZL1,
             (select nvl(sum(il_obr*wsp_p),0) from v_wyc2 where nr_kom_zlec=pNK_ZLEC and nr_inst_plan=nr_komp_inst) wielk_zl_max,
            max(Z.dl_zmiany*nvl(nullif(wyd_nom,0),999999)) wyd_nom, max(Z.dl_zmiany*nvl(nullif(wyd_max,0),999999)) wyd_max  --999999 je¿eli wydajnosæ nieustawiona(=0) tzn.¿e nie ma ograniczenia
      from zmiany Z
@@ -1209,11 +1268,13 @@ FUNCTION LISTA_PRZEKROCZEN1(pLISTA_ZLEC VARCHAR2, pSQL_WHERE VARCHAR2) RETURN VA
      where I.czy_czynna='TAK'
        and nr_komp_zm between pZM_OD and pZM_DO
        and Z.zatwierdz=0 and Z.dl_zmiany>0
-       and nr_komp_inst in (select distinct nr_inst_plan from l_wyc2 where nr_kom_zlec=pNK_ZLEC)
+       --and nr_komp_inst in (select distinct nr_inst_plan from l_wyc2 where nr_kom_zlec=pNK_ZLEC)
+       and not (pALL_INST=0 and not nr_komp_inst in (select distinct nr_inst_plan from l_wyc2 where nr_kom_zlec=pNK_ZLEC))
+       and not (pALL_INST=1 and not nr_komp_inst in (select nr_komp_inst from gr_inst_dla_obr where nr_komp_obr in (select distinct nr_obr from l_wyc2 where nr_kom_zlec=pNK_ZLEC)))
        and nvl(H.typ_harm,'P')='P'
      group by nr_komp_inst, nr_komp_zm;
    END WYPELNIJ_ZMIANY;
-
+/*
   FUNCTION ILE_WOLNE(pINST NUMBER, pNR_ZM NUMBER, pMAX NUMBER default 0) RETURN NUMBER
    AS
     vRET NUMBER(10,2);
@@ -1223,34 +1284,49 @@ FUNCTION LISTA_PRZEKROCZEN1(pLISTA_ZLEC VARCHAR2, pSQL_WHERE VARCHAR2) RETURN VA
     WHERE nr_komp_inst=pINST AND nr_komp_zm=pNR_ZM;
     RETURN vRET;
    END ILE_WOLNE;
-
-  FUNCTION CZY_WEJDZIE(pINST NUMBER, pNR_ZM NUMBER, pILE NUMBER) RETURN boolean
+*/
+  FUNCTION CZY_WEJDZIE(pINST NUMBER, pNR_ZM NUMBER, pILE_PRZEL NUMBER, pILE_SZT NUMBER DEFAULT 0) RETURN boolean
    AS
     vWolneNom NUMBER(10,2);
     vWolneMax NUMBER(10,2);
     vZlecPlan NUMBER(10,2);   --ile zlecenia ju¿ wpisane
-    vZlecMax  NUMBER(10,2);   --ile maks. zlecenia na inst. 
+    vZlecMax  NUMBER(10,2);   --ile maks. zlecenia na inst.
+    vRet boolean DEFAULT true;
    BEGIN
-    --wielk_zl0 -ilosc zlecenia wczesniej zaplanowana na zmianê
-    --wielk_zl1 -ilosc zlecenia zaplanowana na zmianê w bie¿¹cej sesji planowania
-    --wielk_zl_max -calkowita ilosc zlecenia na instalacji
-    SELECT nvl(max(wyd_nom-wielk+wielk_zl0-wielk_zl1),0),
-           nvl(max(wyd_max-wielk+wielk_zl0),0),
-           nvl(max(wielk_zl1),0),  
-           nvl(max(wielk_zl_max),0)
-      INTO vWolneNom, vWolneMax, vZlecPlan, vZlecMax
-    FROM tmp_zmiany
-    WHERE nr_komp_inst=pINST AND nr_komp_zm=pNR_ZM;
-    RETURN vWolneNom>0/*pILE*/ or vZlecPlan>0 and vWolneMax>=vZlecMax;-- and vWolneNom-vZlecPlan>gMIN_ZL; --próba ograniczenia dzielenia - wygeneruje problem przy czêœciach>pMIN_ZL
+    IF pILE_PRZEL>0 THEN
+     --wielk_zl0 -ilosc zlecenia wczesniej zaplanowana na zmianê
+     --wielk_zl1 -ilosc zlecenia zaplanowana na zmianê w bie¿¹cej sesji planowania
+     --wielk_zl_max -calkowita ilosc zlecenia na instalacji
+     SELECT nvl(max(wyd_nom-wielk+wielk_zl0-wielk_zl1),0),
+            nvl(max(wyd_max-wielk+wielk_zl0),0),
+            nvl(max(wielk_zl1),0),  
+            nvl(max(wielk_zl_max),0)
+       INTO vWolneNom, vWolneMax, vZlecPlan, vZlecMax
+     FROM tmp_zmiany
+     WHERE nr_komp_inst=pINST AND nr_komp_zm=pNR_ZM;
+     vRet:=vWolneNom>0/*pILE*/ or vZlecPlan>0 and vWolneMax>=vZlecMax;-- and vWolneNom-vZlecPlan>gMIN_ZL; --próba ograniczenia dzielenia - wygeneruje problem przy czêœciach>pMIN_ZL
+    END IF;
+    --analogicznie dla szt
+    IF pILE_SZT>0 THEN
+     SELECT nvl(max(wyd_nom-szt+szt_zl0-szt_zl1),0),
+            nvl(max(wyd_max-szt+szt_zl0),0),
+            nvl(max(szt_zl1),0),  
+            nvl(max(szt_zl_max),0)
+       INTO vWolneNom, vWolneMax, vZlecPlan, vZlecMax
+     FROM tmp_zmiany2
+     WHERE nr_komp_inst=pINST AND nr_komp_zm=pNR_ZM;
+     vRet:=vWolneNom>0 or vZlecPlan>0 and vWolneMax>=vZlecMax;
+    END IF;
+    RETURN vRet;
    END CZY_WEJDZIE; 
 
   FUNCTION SZUKAJ_ZMIANY(pINST NUMBER, pZM_OD NUMBER, pZM_DO NUMBER, /*pILE_GODZ NUMBER DEFAULT 0*/ pILE NUMBER, pKIERUNEK NUMBER DEFAULT 0) RETURN NUMBER --pKIERUNEK=0 szukaj wstecz   1-wprzód
    AS
     CURSOR c1 IS
-      SELECT nr_komp_inst, nr_komp_zm, zmiana, dl_zmiany
-      FROM zmiany
+      SELECT nr_komp_inst, nr_komp_zm, zmiana, zmiany.dl_zmiany, trim(parinst.jedn) jedn
+      FROM zmiany JOIN parinst USING (nr_komp_inst)
       WHERE nr_komp_inst=pINST AND nr_komp_zm between pZM_OD and pZM_DO -- - sign(pILE_GODZ)
-        AND zatwierdz=0 AND dl_zmiany>0
+        AND zmiany.zatwierdz=0 AND zmiany.dl_zmiany>0
       ORDER BY case when pKIERUNEK=1 then nr_komp_zm else 0 end, nr_komp_zm desc;
     rec c1%ROWTYPE;
     sumaGodz NUMBER(6):=0;
@@ -1267,11 +1343,112 @@ FUNCTION LISTA_PRZEKROCZEN1(pLISTA_ZLEC VARCHAR2, pSQL_WHERE VARCHAR2) RETURN VA
       --EXIT WHEN sumaGodz>=pILE_GODZ;
       --ileWolne:=ILE_WOLNE(rec.nr_komp_inst, rec.nr_komp_zm,0)
 --      EXIT;
-      EXIT WHEN CZY_WEJDZIE(rec.nr_komp_inst, rec.nr_komp_zm, pILE);
+      EXIT WHEN CZY_WEJDZIE(rec.nr_komp_inst, rec.nr_komp_zm, case when rec.jedn='sz' then 0 else pILE end, case when rec.jedn='sz' then 1 else 0 end);
      END LOOP;
      CLOSE c1;
-     RETURN nvl(rec.nr_komp_zm,0);
+     RETURN nvl(rec.nr_komp_zm,gZM_BUFOR);
    END SZUKAJ_ZMIANY;
+   
+  FUNCTION SZUKAJ_ZMIANY_I_INST(pNK_ZLEC NUMBER, pNR_POZ NUMBER, pNR_WAR NUMBER, pNR_OBR NUMBER, pINST_AKT NUMBER, pZM_OD NUMBER, pZM_DO NUMBER, pKIERUNEK NUMBER DEFAULT 0) RETURN NUMBER --pKIERUNEK=0 szukaj wstecz   1-wprzód
+   AS
+    CURSOR c1 IS  --ulozenie instalacji w kiolejnosci w jakiej maja byc planowane
+      SELECT I.naz_inst, trim(I.jedn) jedn, V.nk_inst nr_komp_inst, V.nr_poz, V.nr_porz, G.nr_komp_gr, G.kolej, V1.inst_std,
+             V.kolejnosc_z_grupy, V.gr_akt,
+             nvl2(V1.inst_std,G.kolej,V.kolejnosc_z_grupy*100) kol_wynikowa,
+             --najpierw wpisy w kolejnosci z pasujacego ciagu instalacji, pozostale w kolenosci z grupy inst. dla obrobki
+             --ktore wystapienie instalacji (wazny tylko ktory_wpis_dla_inst=1), moze byc w kilku ciagach, wa¿ny ten o najni¿szym numerze
+             rank() OVER (PARTITION BY V.nk_inst ORDER BY decode(pINST_AKT,V.nk_inst,1,null), V1.inst_std,nvl2(V1.inst_std,G.kolej,V.kolejnosc_z_grupy),G.nr_komp_gr) ktory_wpis_dla_inst
+      FROM v_spiss V
+      INNER JOIN parinst I ON I.nr_komp_inst=V.nk_inst
+      --sprawdzenei czy dana instalacja jest w grupie..
+      LEFT JOIN gr_inst_pow G ON V.nk_inst=G.nr_komp_inst
+      --..ktorej instalacja wiodaca..
+      LEFT JOIN gr_inst_pow G0 ON G0.nr_komp_gr=G.nr_komp_gr and G0.nr_komp_inst>0 and not G0.nr_komp_inst=G.nr_komp_inst and G0.flag=1 --inst. wiodaca
+      --..jest instalacja standardowa dla ktorejkolwie operacji w beizacej pozycji i warstwie
+      LEFT JOIN v_spiss V1 ON V1.nr_kom_zlec=V.nr_kom_zlec and V1.nr_poz=V.nr_poz and V1.inst_std=G0.nr_komp_inst and
+                              (V1.war_od between V.war_od and V.war_do or V.war_od between V1.war_od and V1.war_do)
+      WHERE V.nr_kom_zlec=pNK_ZLEC and V.nr_poz=pNR_POZ and V.war_od=pNR_WAR
+        AND not (V.nk_inst<>pINST_AKT and V.kryt_suma>0)
+        AND V.nk_obr=pNR_OBR
+      ORDER BY decode(pINST_AKT,V.nk_inst,1,null), kol_wynikowa; --najpierwP pINST_AKT
+      
+--    CURSOR cOLD IS
+--      SELECT nr_komp_inst, nr_komp_zm, zmiana, zmiany.dl_zmiany, parinst.jedn
+--      FROM zmiany JOIN parinst USING (nr_komp_inst)
+--      WHERE nr_komp_inst=pINST AND nr_komp_zm between pZM_OD and pZM_DO -- - sign(pILE_GODZ)
+--        AND zmiany.zatwierdz=0 AND zmiany.dl_zmiany>0
+--      ORDER BY case when pKIERUNEK=1 then nr_komp_zm else 0 end, nr_komp_zm desc;
+    inst c1%ROWTYPE;
+    vWolneNom NUMBER(10,2);
+    vWolneMax NUMBER(10,2);
+    --vZlecPlan NUMBER(10,2);     --ile zlecenia ju¿ wpisane
+    --vZlecPlanSzt NUMBER(10,2);  --ile sztuk zlecenia ju¿ wpisane
+    vZlecMax  NUMBER(10,2);     --ile maks. zlecenia na inst.
+    vZlecMaxSzt  NUMBER(10,2);  --ile maks. sztuk zlecenia na inst.
+    nrZmTmp NUMBER(10) :=0;
+    nrZmNaCalosc NUMBER(10) :=0;
+    nrZmNaInnej NUMBER(10) :=0;
+   BEGIN
+     --resetowanie zmiennych do których zapisza sie znalezione instalacja i zmiana
+     tabOBRi(pNR_OBR):=0;
+     tabOBRz(pNR_OBR):=0;
+     
+     OPEN c1;
+     LOOP
+      FETCH c1 INTO inst;
+      EXIT WHEN c1%NOTFOUND;
+      --pobranie danych o zleceniu z inst. domyslnej (pINST)
+      IF inst.nr_komp_inst=pINST_AKT THEN 
+       SELECT --nvl(max(wielk_zl1),0),    --ilosc juz wpisana na instalacje
+              --nvl(max(szt_zl1),0),
+              nvl(max(wielk_zl_max),0), --max. ilosc przypisana do instalacji
+              nvl(max(szt_zl_max),0),
+              nvl(decode(pKIERUNEK,1,min(nr_komp_zm),max(nr_komp_zm)),0),
+              --to samo, ale z uwzglednieniem tylko zmian, ktore pomieszcza calosc zlecenia
+              nvl(decode(pKIERUNEK,1,
+                  min(case when wyd_max+decode(inst.jedn,'sz',szt_zl0-szt-szt_zl_max,wielk_zl0-wielk-wielk_zl_max)>=0 then nr_komp_zm else null end),
+                  max(case when wyd_max+decode(inst.jedn,'sz',szt_zl0-szt-szt_zl_max,wielk_zl0-wielk-wielk_zl_max)>=0 then nr_komp_zm else null end))
+               ,0)
+         INTO vZlecMax, vZlecMaxSzt, nrZmTmp, nrZmNaCalosc
+       FROM tmp_zmiany2
+       WHERE nr_komp_inst=pINST_AKT
+         AND nr_komp_zm between pZM_OD and pZM_DO
+         AND zatwierdz=0 and dl_zmiany>0
+         AND (decode(inst.jedn,'sz',wyd_nom+szt_zl0-szt-szt_zl1,wyd_nom+wielk_zl0-wielk-wielk_zl1)>0 OR
+              decode(inst.jedn,'sz',wyd_max+szt_zl0-szt-szt_zl_max,wyd_max+wielk_zl0-wielk-wielk_zl_max)>0);
+       tabOBRz(pNR_OBR):=nrZmTmp;  --pierwsza wolna zmiana na inst. domyslnej
+       IF nrZmTmp=nrZmNaCalosc THEN --zapisanie instalacji, jesli wejdzie tam calosc obrobki w zleceniu
+        tabOBRi(pNR_OBR):=pINST_AKT;
+       END IF;
+      --wyszukanie 1. wolnej zmiany na cale zlecenie na innej inst (jesli 1. raz w c1)
+      --GR_AKT=0 czyli instalacja znacozna jako Aktywna w Grupie inst. dla obróbki
+      ELSIF inst.ktory_wpis_dla_inst=1 AND inst.gr_akt=0 THEN
+       SELECT --nvl(decode(inst.jedn,'sz',max(wyd_nom-szt+szt_zl0-szt_zl1),max(wyd_nom-wielk+wielk_zl0-wielk_zl1)),0),
+              --nvl(decode(inst.jedn,'sz',max(wyd_max-szt+szt_zl0),max(wyd_max-wielk+wielk_zl0)),0),
+              nvl(decode(pKIERUNEK,1,min(nr_komp_zm),max(nr_komp_zm)),nrZmTmp) 
+         INTO nrZmNaInnej
+       FROM tmp_zmiany2
+       WHERE nr_komp_inst=inst.nr_komp_inst
+         AND nr_komp_zm between pZM_OD and pZM_DO
+         AND zatwierdz=0 and dl_zmiany>0
+         --wolne nominalnie
+         AND decode(inst.jedn,'sz',wyd_nom+szt_zl0-szt,wyd_nom+wielk_zl0-wielk)>0
+         --zmiesci sie calosc przewidziana na ta (wielk_zl_max) i domyslna (vZlecMax) instalacje
+         AND decode(inst.jedn,'sz',wyd_max+szt_zl0-szt-szt_zl_max-vZlecMaxSzt,wyd_max+wielk_zl0-wielk-wielk_zl_max-vZlecMax)>0;
+       --zapamietanie wynikow
+       IF nrZmTmp=0 and nrZmNaInnej>0 OR pKIERUNEK=1 and nrZmNaInnej<nrZmTmp OR pKIERUNEK=0 and nrZmNaInnej>nrZmTmp THEN 
+        nrZmTmp:=nrZmNaInnej;
+        tabOBRi(pNR_OBR):=inst.nr_komp_inst;
+        tabOBRz(pNR_OBR):=nrZmTmp;
+       END IF; 
+      END IF;
+      --wyjscie jesli zmiana graniczna przeszukiwanego zakresu zmian
+      EXIT WHEN pKIERUNEK=1 AND nrZmTmp=pZM_OD OR pKIERUNEK=0 AND nrZmTmp=pZM_DO;
+     END LOOP;
+     CLOSE c1;
+     IF nrZmTmp=0 THEN NrZmTmp:=gZM_BUFOR; END IF;
+     RETURN nrZmTmp;
+   END SZUKAJ_ZMIANY_I_INST;
 
   --wersja przeniesiona z @P
   PROCEDURE PLANUJ_SZYBY1 (pNK_ZLEC NUMBER, pNR_ZM_LAST NUMBER default 0)
@@ -1326,8 +1503,8 @@ FUNCTION LISTA_PRZEKROCZEN1(pLISTA_ZLEC VARCHAR2, pSQL_WHERE VARCHAR2) RETURN VA
      UPDATE l_wyc2
      SET nr_zm_plan=NrZm
      WHERE nr_kom_zlec=pNK_ZLEC and nr_poz_zlec=rec1.nr_poz_zlec and nr_szt=rec1.nr_szt and ELEMENT_LISTY(rec1.nry_porz,nr_porz_obr)=1;
-     update tmp_zmiany 
-     set wielk_zl1=wielk_zl1+rec1.il_przel
+     update tmp_zmiany2
+     set szt_zl1=szt_zl1+1, wielk_zl1=wielk_zl1+rec1.il_przel
      where nr_komp_inst=rec1.nr_inst_plan and nr_komp_zm=NrZm;
     END LOOP;
     CLOSE c1;
@@ -1396,8 +1573,8 @@ FUNCTION LISTA_PRZEKROCZEN1(pLISTA_ZLEC VARCHAR2, pSQL_WHERE VARCHAR2) RETURN VA
      WHERE nr_kom_zlec=pNK_ZLEC and nr_poz_zlec=rec1.nr_poz_zlec and nr_szt=rec1.nr_szt
        --AND (ELEMENT_LISTY(rec1.nry_porz,nr_porz_obr)=1 or ELEMENT_LISTY(rec1.nry_porz,nr_porz_obr-1500)=1); --taki sam plan inst powi¹zanej INST_POW 
        AND ELEMENT_LISTY(rec1.nry_porz,nr_porz_obr)=1;
-     update tmp_zmiany 
-     set wielk_zl1=wielk_zl1+rec1.il_przel
+     update tmp_zmiany2
+     set szt_zl1=szt_zl1+1, wielk_zl1=wielk_zl1+rec1.il_przel
      where nr_komp_inst=rec1.nr_inst_plan and nr_komp_zm=NrZm;
      --nowe 01/2018 - zabezpieczenie przez dzieleniem warstw na zmiany na inst. kompletacji, niedokladnosc w TMP_ZMIANY
      IF rec1.obr_lacz in (3,4) THEN 
@@ -1484,15 +1661,31 @@ FUNCTION LISTA_PRZEKROCZEN1(pLISTA_ZLEC VARCHAR2, pSQL_WHERE VARCHAR2) RETURN VA
       NrZm:=NrZmPoprz+czasPoprIleZm8h; 
       IF PKG_CZAS.NR_ZM_TO_ZM(NrZm)<PKG_CZAS.NR_ZM_TO_ZM(NrZmPoprz) THEN NrZm:=NrZm+1; END IF; --dodanie 1 bo zmiana 4 nie istnieje
      END IF; 
-     NrZm:=SZUKAJ_ZMIANY(rec1.nr_inst_plan, NrZm, NrZmLast, rec1.il_przel,1);
-     IF NrZM=0 THEN NrZM:=gZM_BUFOR; END IF;
-     UPDATE l_wyc2
-     SET nr_zm_plan=NrZm
-     WHERE nr_kom_zlec=pNK_ZLEC and nr_poz_zlec=rec1.nr_poz_zlec and nr_szt=rec1.nr_szt and ELEMENT_LISTY(rec1.nry_porz,nr_porz_obr)=1;
-     update tmp_zmiany 
-     set wielk_zl1=wielk_zl1+rec1.il_przel
-     where nr_komp_inst=rec1.nr_inst_plan and nr_komp_zm=NrZm;
-     -- zabezpieczenie przez dzieleniem warstw na zmiany na inst. kompletacji, niedokladnosc w TMP_ZMIANY
+     IF vWDR=5 THEN
+      IF true or nvl(tabOBRi(rec1.nr_obr),0)=0 THEN
+       --CZY_MOZNA_PRZENIESC (pNK_ZLEC NUMBER, pPOZ NUMBER DEFAULT 0, pINST NUMBER, pZM NUMBER, pINST_Z NUMBER, pINST_NA NUMBER) RETURN NUMBER
+       --SZUKAJ_ZMIANY_I_INST(pNK_ZLEC NUMBER, pNR_POZ NUMBER, pNR_WAR NUMBER, pNR_OBR NUMBER, pINST_AKT NUMBER, pZM_OD NUMBER, pZM_DO NUMBER, pKIERUNEK NUMBER DEFAULT 0) RETURN NUMBER --pKIERUNEK=0 szukaj wstecz   1-wprzód
+       NrZm:=SZUKAJ_ZMIANY_I_INST(pNK_ZLEC, rec1.nr_poz_zlec, rec1.nr_warst, rec1.nr_obr, rec1.nr_inst_plan, NrZm, NrZmLast, 1);
+      ELSE 
+       NrZm:=tabOBRz(rec1.nr_obr);
+      END IF;
+       UPDATE l_wyc2
+       SET nr_zm_plan=NrZm, nr_inst_plan=nvl(nullif(tabOBRi(rec1.nr_obr),0),nr_inst_plan)
+       WHERE nr_kom_zlec=pNK_ZLEC and nr_poz_zlec=rec1.nr_poz_zlec and nr_szt=rec1.nr_szt and ELEMENT_LISTY(rec1.nry_porz,nr_porz_obr)=1;
+       update tmp_zmiany2
+       set szt_zl1=szt_zl1+1, wielk_zl1=wielk_zl1+rec1.il_przel
+       where nr_komp_inst=rec1.nr_inst_plan and nr_komp_zm=NrZm;
+     ELSE
+       NrZm:=SZUKAJ_ZMIANY(rec1.nr_inst_plan, NrZm, NrZmLast, rec1.il_przel,1);
+       UPDATE l_wyc2
+       SET nr_zm_plan=NrZm
+       WHERE nr_kom_zlec=pNK_ZLEC and nr_poz_zlec=rec1.nr_poz_zlec and nr_szt=rec1.nr_szt and ELEMENT_LISTY(rec1.nry_porz,nr_porz_obr)=1;
+       update tmp_zmiany2
+       set szt_zl1=szt_zl1+1, wielk_zl1=wielk_zl1+rec1.il_przel
+       where nr_komp_inst=rec1.nr_inst_plan and nr_komp_zm=NrZm;
+     END IF;  
+
+     -- zabezpieczenie przez dzieleniem warstw na zmiany na inst. kompletacji, wprowadza drobna niedokladnosc w TMP_ZMIANY
      IF rec1.obr_lacz in (3,4) THEN
       UPDATE l_wyc2
       SET nr_zm_plan=NrZm
@@ -1507,13 +1700,17 @@ FUNCTION LISTA_PRZEKROCZEN1(pLISTA_ZLEC VARCHAR2, pSQL_WHERE VARCHAR2) RETURN VA
 
   PROCEDURE PLANUJ_SZYBY (pNK_ZLEC NUMBER, pNR_ZM_POCZ NUMBER default 0, pNR_ZM_KONC NUMBER default 0) AS
   BEGIN
-   USUN_PLAN(pNK_ZLEC);
+   IF vWDR=0 THEN SELECT nr_wdr INTO vWDR FROM firma; END IF;
    --PLANUJ_SZYBY1(pNK_ZLEC, pNR_ZM_KONC);
    if pNR_ZM_POCZ>0 then
     PLANUJ_SZYBY3(pNK_ZLEC, pNR_ZM_POCZ);  --wprzód
    else 
     PLANUJ_SZYBY2(pNK_ZLEC, pNR_ZM_KONC); --wstecz
    end if;
+   --22.02.2021 przeniesione z pocz. procedury
+   USUN_PLAN(pNK_ZLEC);
+   --22.02.2021 nowe
+   PORZADKUJ_ZMIANY_I_KALINST (-pNK_ZLEC, 0); --porzadkowanie zmian dotychczasowych
 
   END;
 
